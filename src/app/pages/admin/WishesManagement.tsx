@@ -48,7 +48,7 @@ export function WishesManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, toast]);
 
   // Debounced search
   useEffect(() => {
@@ -59,7 +59,7 @@ export function WishesManagement() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, loadWishes, loading, refreshing]);
+  }, [searchQuery, loading, refreshing, loadWishes]);
 
   const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus ucapan ini?")) {

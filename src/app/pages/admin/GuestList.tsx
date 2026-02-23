@@ -48,7 +48,7 @@ export function GuestList() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery, filter]);
+  }, [searchQuery, filter, toast]);
 
   // Debounced search
   useEffect(() => {
@@ -59,14 +59,14 @@ export function GuestList() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, loadGuests, loading, refreshing]);
+  }, [searchQuery, loading, refreshing, loadGuests]);
 
   // Filter change (immediate)
   useEffect(() => {
     if (!loading && !refreshing) {
       loadGuests();
     }
-  }, [filter, loadGuests, loading, refreshing]);
+  }, [filter, loading, refreshing, loadGuests]);
 
   const getAttendanceIcon = (attendance: string) => {
     switch (attendance) {
