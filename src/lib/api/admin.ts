@@ -62,6 +62,41 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 /**
+ * Submit RSVP (guest-facing)
+ */
+export interface SubmitRSVP {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  attendance: string;
+  guestCount?: string | null;
+  message?: string | null;
+}
+
+export async function submitRSVP(data: SubmitRSVP): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.from("Guest").insert({
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      attendance: data.attendance,
+      guestCount: data.attendance === "hadir" ? data.guestCount : null,
+      message: data.message || null,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting RSVP:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
  * Fetch all guests with optional filtering
  */
 export interface Guest {

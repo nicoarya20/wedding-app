@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Users, Phone, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/api/admin";
+import { submitRSVP, type SubmitRSVP as RSVPData } from "@/lib/api/admin";
 
 export function RSVP() {
   const [formData, setFormData] = useState({
@@ -19,22 +19,37 @@ export function RSVP() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!formData.name.trim()) {
+      toast.error("Nama lengkap wajib diisi");
+      return;
+    }
+    if (!formData.attendance) {
+      toast.error("Konfirmasi kehadiran wajib diisi");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from("Guest").insert({
+      const rsvpData: RSVPData = {
         name: formData.name,
         email: formData.email || null,
         phone: formData.phone || null,
         attendance: formData.attendance,
         guestCount: formData.attendance === "hadir" ? formData.guestCount : null,
         message: formData.message || null,
-      });
+      };
 
-      if (error) throw error;
+      const result = await submitRSVP(rsvpData);
 
-      setSubmitted(true);
-      toast.success("RSVP berhasil dikirim!");
+      if (result.success) {
+        setSubmitted(true);
+        toast.success("RSVP berhasil dikirim!");
+      } else {
+        toast.error(result.error || "Gagal mengirim RSVP. Silakan coba lagi.");
+      }
     } catch (error) {
       console.error("Error submitting RSVP:", error);
       toast.error("Gagal mengirim RSVP. Silakan coba lagi.");
