@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Users, MessageSquare, Calendar, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, Calendar, LogOut, UserCog } from "lucide-react";
 
 export function AdminLayout() {
   const location = useLocation();
@@ -7,6 +7,7 @@ export function AdminLayout() {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
+    { icon: UserCog, label: "User", path: "/admin/dashboard/users" },
     { icon: Users, label: "Tamu", path: "/admin/dashboard/guests" },
     { icon: MessageSquare, label: "Ucapan", path: "/admin/dashboard/wishes" },
     { icon: Calendar, label: "Acara", path: "/admin/dashboard/event" },

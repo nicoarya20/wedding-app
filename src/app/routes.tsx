@@ -11,6 +11,7 @@ import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { GuestList } from "./pages/admin/GuestList";
 import { WishesManagement } from "./pages/admin/WishesManagement";
 import { EventManagement } from "./pages/admin/EventManagement";
+import { UserManagement } from "./pages/admin/UserManagement";
 import { NotFound } from "./pages/NotFound";
 
 export const router = createBrowserRouter([
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
         Component: AdminLayout,
         children: [
           { index: true, Component: AdminDashboard },
+          { path: "users", Component: UserManagement },
           { path: "guests", Component: GuestList },
           { path: "wishes", Component: WishesManagement },
           { path: "event", Component: EventManagement },
