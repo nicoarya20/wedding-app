@@ -48,9 +48,9 @@ export function WishesManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery, toast]);
+  }, [toast, searchQuery]);
 
-  // Debounced search
+  // Debounced search - triggers on searchQuery change
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!loading && !refreshing) {
@@ -59,7 +59,7 @@ export function WishesManagement() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, loading, refreshing, loadWishes]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus ucapan ini?")) {

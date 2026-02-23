@@ -48,9 +48,9 @@ export function GuestList() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [searchQuery, filter, toast]);
+  }, [toast, searchQuery, filter]);
 
-  // Debounced search
+  // Debounced search - triggers on searchQuery change
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!loading && !refreshing) {
@@ -59,14 +59,14 @@ export function GuestList() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, loading, refreshing, loadGuests]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Filter change (immediate)
+  // Filter change - triggers on filter change
   useEffect(() => {
     if (!loading && !refreshing) {
       loadGuests();
     }
-  }, [filter, loading, refreshing, loadGuests]);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getAttendanceIcon = (attendance: string) => {
     switch (attendance) {
