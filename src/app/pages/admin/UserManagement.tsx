@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Plus, Edit, Trash2, Loader2, Search, Eye } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Loader2, Search, Palette } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getAllUsers, createUser, type User as ApiUser } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
@@ -205,11 +205,11 @@ export function UserManagement() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => navigate(`/admin/users/${user.id}/wedding`)}
+                              onClick={() => navigate(`/admin/dashboard/users/${user.id}/wedding`)}
                               className="text-rose-600 hover:text-rose-900 transition-colors"
-                              title="Kelola wedding"
+                              title="Kelola tema wedding"
                             >
-                              <Eye className="w-5 h-5" />
+                              <Palette className="w-5 h-5" />
                             </button>
                             <button
                               className="text-blue-600 hover:text-blue-900 transition-colors"
