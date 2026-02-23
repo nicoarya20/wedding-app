@@ -1,26 +1,37 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Lock, User, LogIn } from "lucide-react";
+import { Lock, User, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { loginAdmin } from "@/lib/api/admin";
 
 export function AdminLogin() {
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
-    // Simple authentication (dalam production gunakan backend yang aman)
-    if (credentials.username === "admin" && credentials.password === "admin123") {
-      localStorage.setItem("adminLoggedIn", "true");
-      toast.success("Login berhasil!");
-      navigate("/admin/dashboard");
-    } else {
-      toast.error("Username atau password salah!");
+    try {
+      const success = await loginAdmin(credentials.username, credentials.password);
+
+      if (success) {
+        localStorage.setItem("adminLoggedIn", "true");
+        toast.success("Login berhasil!");
+        navigate("/admin/dashboard");
+      } else {
+        toast.error("Username atau password salah!");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,19 +97,22 @@ export function AdminLogin() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <LogIn className="w-5 h-5" />
-              Masuk
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Masuk
+                </>
+              )}
             </button>
           </form>
-
-          {/* Demo credentials info */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-            <p className="text-xs text-gray-600 text-center">
-              <strong>Demo:</strong> username: <code>admin</code>, password: <code>admin123</code>
-            </p>
-          </div>
         </div>
       </motion.div>
     </div>

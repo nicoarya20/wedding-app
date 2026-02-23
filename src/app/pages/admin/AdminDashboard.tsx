@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, CheckCircle, XCircle, HelpCircle, MessageSquare } from "lucide-react";
+import { Users, CheckCircle, XCircle, HelpCircle, MessageSquare, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { getDashboardStats, type DashboardStats as ApiDashboardStats } from "@/lib/api/admin";
+import { toast } from "sonner";
 
-interface Stats {
-  totalGuests: number;
-  attending: number;
-  notAttending: number;
-  uncertain: number;
-  totalWishes: number;
-}
+interface Stats extends ApiDashboardStats {}
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
@@ -19,11 +15,13 @@ export function AdminDashboard() {
     uncertain: 0,
     totalWishes: 0,
   });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    const adminLoggedIn = localStorage.getItem("adminLoggedIn");
+    if (!adminLoggedIn) {
       navigate("/admin");
       return;
     }
@@ -31,21 +29,17 @@ export function AdminDashboard() {
     loadStats();
   }, [navigate]);
 
-  const loadStats = () => {
-    const rsvps = JSON.parse(localStorage.getItem("rsvps") || "[]");
-    const wishes = JSON.parse(localStorage.getItem("wishes") || "[]");
-
-    const attending = rsvps.filter((r: any) => r.attendance === "hadir").length;
-    const notAttending = rsvps.filter((r: any) => r.attendance === "tidak-hadir").length;
-    const uncertain = rsvps.filter((r: any) => r.attendance === "belum-pasti").length;
-
-    setStats({
-      totalGuests: rsvps.length,
-      attending,
-      notAttending,
-      uncertain,
-      totalWishes: wishes.length,
-    });
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const data = await getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      console.error("Error loading stats:", error);
+      toast.error("Gagal memuat data dashboard");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const statCards = [
@@ -104,31 +98,41 @@ export function AdminDashboard() {
           <p className="text-gray-600">Overview acara wedding Anda</p>
         </motion.div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+            <span className="ml-2 text-gray-600">Memuat data...</span>
+          </div>
+        )}
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          {statCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className={`bg-white rounded-2xl shadow-md p-5 ${
-                  index === statCards.length - 1 ? "col-span-2" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`${card.bgColor} rounded-xl p-2.5`}>
-                    <Icon className={`w-5 h-5 ${card.iconColor}`} />
+        {!loading && (
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            {statCards.map((card, index) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                  className={`bg-white rounded-2xl shadow-md p-5 ${
+                    index === statCards.length - 1 ? "col-span-2" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`${card.bgColor} rounded-xl p-2.5`}>
+                      <Icon className={`w-5 h-5 ${card.iconColor}`} />
+                    </div>
                   </div>
-                </div>
-                <div className="text-3xl mb-1 text-gray-900">{card.value}</div>
-                <div className="text-sm text-gray-600">{card.title}</div>
-              </motion.div>
-            );
-          })}
-        </div>
+                  <div className="text-3xl mb-1 text-gray-900">{card.value}</div>
+                  <div className="text-sm text-gray-600">{card.title}</div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Attendance Chart */}
         <motion.div
@@ -221,6 +225,23 @@ export function AdminDashboard() {
             </button>
           </div>
         </motion.div>
+
+        {/* Refresh Button */}
+        {!loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            className="mt-4 text-center"
+          >
+            <button
+              onClick={loadStats}
+              className="text-sm text-rose-600 hover:text-rose-700 transition-colors"
+            >
+              🔄 Refresh data
+            </button>
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Heart, MessageSquare, Send } from "lucide-react";
+import { Heart, MessageSquare, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/api/admin";
 
 interface Wish {
   id: string;
@@ -16,19 +17,33 @@ export function Wishes() {
     name: "",
     message: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadWishes();
   }, []);
 
-  const loadWishes = () => {
-    const storedWishes = JSON.parse(localStorage.getItem("wishes") || "[]");
-    setWishes(storedWishes.sort((a: Wish, b: Wish) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ));
+  const loadWishes = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("Wish")
+        .select("*")
+        .order("createdAt", { ascending: false });
+
+      if (error) throw error;
+
+      setWishes(data || []);
+    } catch (error) {
+      console.error("Error loading wishes:", error);
+      toast.error("Gagal memuat ucapan");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.message) {
@@ -36,20 +51,25 @@ export function Wishes() {
       return;
     }
 
-    const newWish: Wish = {
-      id: Date.now().toString(),
-      name: formData.name,
-      message: formData.message,
-      createdAt: new Date().toISOString(),
-    };
+    setSubmitting(true);
 
-    const storedWishes = JSON.parse(localStorage.getItem("wishes") || "[]");
-    storedWishes.push(newWish);
-    localStorage.setItem("wishes", JSON.stringify(storedWishes));
+    try {
+      const { error } = await supabase.from("Wish").insert({
+        name: formData.name,
+        message: formData.message,
+      });
 
-    setWishes([newWish, ...wishes]);
-    setFormData({ name: "", message: "" });
-    toast.success("Ucapan berhasil dikirim!");
+      if (error) throw error;
+
+      await loadWishes();
+      setFormData({ name: "", message: "" });
+      toast.success("Ucapan berhasil dikirim!");
+    } catch (error) {
+      console.error("Error submitting wish:", error);
+      toast.error("Gagal mengirim ucapan. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -121,63 +141,83 @@ export function Wishes() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center justify-center gap-2"
+              disabled={submitting}
+              className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send className="w-5 h-5" />
-              Kirim Ucapan
+              {submitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Mengirim...
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5" />
+                  Kirim Ucapan
+                </>
+              )}
             </button>
           </div>
         </motion.form>
 
-        {/* Wishes List */}
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="space-y-4"
-        >
-          <div className="flex items-center gap-2 text-gray-600 mb-4">
-            <MessageSquare className="w-5 h-5" />
-            <span className="text-sm">{wishes.length} Ucapan</span>
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+            <span className="ml-2 text-gray-600">Memuat ucapan...</span>
           </div>
+        )}
 
-          {wishes.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-md p-8 text-center">
-              <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Belum ada ucapan</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Jadilah yang pertama mengirimkan ucapan
-              </p>
+        {/* Wishes List */}
+        {!loading && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center gap-2 text-gray-600 mb-4">
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-sm">{wishes.length} Ucapan</span>
             </div>
-          ) : (
-            wishes.map((wish, index) => (
-              <motion.div
-                key={wish.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.4 }}
-                className="bg-white rounded-2xl shadow-md p-5"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="bg-gradient-to-br from-rose-100 to-pink-100 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                    <Heart className="w-5 h-5 text-rose-600 fill-rose-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-gray-900">{wish.name}</h3>
-                      <span className="text-xs text-gray-400">
-                        {formatDate(wish.createdAt)}
-                      </span>
+
+            {wishes.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-md p-8 text-center">
+                <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Belum ada ucapan</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Jadilah yang pertama mengirimkan ucapan
+                </p>
+              </div>
+            ) : (
+              wishes.map((wish, index) => (
+                <motion.div
+                  key={wish.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.4 }}
+                  className="bg-white rounded-2xl shadow-md p-5"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-gradient-to-br from-rose-100 to-pink-100 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
+                      <Heart className="w-5 h-5 text-rose-600 fill-rose-600" />
                     </div>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {wish.message}
-                    </p>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-gray-900">{wish.name}</h3>
+                        <span className="text-xs text-gray-400">
+                          {formatDate(wish.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {wish.message}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))
-          )}
-        </motion.div>
+                </motion.div>
+              ))
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
