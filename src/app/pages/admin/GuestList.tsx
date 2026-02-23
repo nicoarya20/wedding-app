@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
-import { Search, Filter, CheckCircle, XCircle, HelpCircle, Mail, Phone, Loader2 } from "lucide-react";
+import { Search, Filter, CheckCircle, XCircle, HelpCircle, Mail, Phone, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getGuests, type Guest as ApiGuest } from "@/lib/api/admin";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ export function GuestList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,22 +26,47 @@ export function GuestList() {
     loadGuests();
   }, [navigate]);
 
-  const loadGuests = async () => {
+  const loadGuests = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const data = await getGuests(searchQuery, filter);
       setGuests(data);
+      setLastUpdated(new Date());
+      
+      if (isRefresh) {
+        toast.success("Data berhasil di-refresh");
+      }
     } catch (error) {
       console.error("Error loading guests:", error);
       toast.error("Gagal memuat data tamu");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadGuests();
   }, [searchQuery, filter]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!loading && !refreshing) {
+        loadGuests();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, loadGuests, loading, refreshing]);
+
+  // Filter change (immediate)
+  useEffect(() => {
+    if (!loading && !refreshing) {
+      loadGuests();
+    }
+  }, [filter, loadGuests, loading, refreshing]);
 
   const getAttendanceIcon = (attendance: string) => {
     switch (attendance) {
@@ -99,8 +126,25 @@ export function GuestList() {
           transition={{ duration: 0.6 }}
           className="mb-6"
         >
-          <h1 className="text-2xl text-gray-800 mb-1">Daftar Tamu</h1>
-          <p className="text-gray-600">Kelola konfirmasi kehadiran tamu</p>
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-2xl text-gray-800">Daftar Tamu</h1>
+            <button
+              onClick={() => loadGuests(true)}
+              disabled={refreshing}
+              className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-gray-600">Kelola konfirmasi kehadiran tamu</p>
+            {lastUpdated && (
+              <p className="text-xs text-gray-400">
+                Terakhir diupdate: {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
         </motion.div>
 
         {/* Loading State */}
@@ -150,8 +194,23 @@ export function GuestList() {
 
         {/* Guest Count */}
         {!loading && (
-          <div className="mb-4 text-sm text-gray-600">
-            Menampilkan {guests.length} tamu
+          <div className="mb-4 flex items-center justify-between text-sm">
+            <div className="text-gray-600">
+              Menampilkan <span className="font-semibold text-gray-900">{guests.length}</span> tamu
+            </div>
+            {guests.length > 0 && (
+              <div className="flex gap-2">
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                  Hadir: {guests.filter(g => g.attendance === "hadir").length}
+                </span>
+                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                  Tidak Hadir: {guests.filter(g => g.attendance === "tidak-hadir").length}
+                </span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                  Belum Pasti: {guests.filter(g => g.attendance === "belum-pasti").length}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

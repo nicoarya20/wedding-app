@@ -73,6 +73,7 @@ export interface Guest {
   guestCount: string | null;
   message: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export async function getGuests(searchQuery?: string, filter?: string): Promise<Guest[]> {
