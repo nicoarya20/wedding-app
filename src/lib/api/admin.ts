@@ -157,7 +157,38 @@ export async function deleteWish(id: string): Promise<boolean> {
 }
 
 /**
- * Fetch event data
+ * Fetch event data (public access for guest pages)
+ */
+export interface PublicEventData {
+  coupleName: string;
+  weddingDate: string;
+  akadTime: string;
+  akadLocation: string;
+  akadAddress: string;
+  resepsiTime: string;
+  resepsiLocation: string;
+  resepsiAddress: string;
+}
+
+export async function getPublicEventData(): Promise<PublicEventData | null> {
+  try {
+    const { data, error } = await supabase
+      .from("Event")
+      .select("coupleName, weddingDate, akadTime, akadLocation, akadAddress, resepsiTime, resepsiLocation, resepsiAddress")
+      .eq("id", "default")
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching public event data:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch event data (admin access)
  */
 export interface EventData {
   id?: string;

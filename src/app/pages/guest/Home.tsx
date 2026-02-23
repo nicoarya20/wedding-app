@@ -1,7 +1,21 @@
-import { useState, useEffect } from "react";
+import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
+import { Calendar, Clock, Heart, MapPin } from "lucide-react";
 import { motion } from "motion/react";
-import { Heart, Calendar, MapPin, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+
+// Default fallback data
+const defaultEventData: PublicEventData = {
+  coupleName: "Sarah & Michael",
+  weddingDate: "2026-06-15",
+  akadTime: "09:00 - 11:00 WIB",
+  akadLocation: "Masjid Al-Ikhlas",
+  akadAddress: "Jl. Sudirman No. 123, Jakarta Pusat",
+  resepsiTime: "14:00 - 17:00 WIB",
+  resepsiLocation: "The Grand Ballroom",
+  resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
+};
 
 export function Home() {
   const [countdown, setCountdown] = useState({
@@ -10,9 +24,31 @@ export function Home() {
     minutes: 0,
     seconds: 0,
   });
+  const [eventData, setEventData] = useState<PublicEventData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Wedding date - ubah sesuai kebutuhan
-  const weddingDate = new Date("2026-06-15T14:00:00");
+  useEffect(() => {
+    loadEventData();
+  }, []);
+
+  const loadEventData = async () => {
+    try {
+      setLoading(true);
+      const data = await getPublicEventData();
+      setEventData(data || defaultEventData);
+    } catch (error) {
+      console.error("Error loading event data:", error);
+      setEventData(defaultEventData);
+      toast.error("Gagal memuat data acara");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Parse wedding date for countdown
+  const weddingDate = eventData 
+    ? new Date(`${eventData.weddingDate}T14:00:00`)
+    : new Date("2026-06-15T14:00:00");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -30,7 +66,24 @@ export function Home() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [weddingDate]);
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // Get couple names for display
+  const getCoupleNames = () => {
+    if (!eventData) return "Loading...";
+    return eventData.coupleName;
+  };
 
   return (
     <div className="min-h-screen">
@@ -57,13 +110,24 @@ export function Home() {
             transition={{ delay: 0.3, duration: 0.8 }}
           >
             <p className="text-sm tracking-widest mb-4 opacity-90">THE WEDDING OF</p>
-            <h1 className="text-5xl mb-2 font-serif">Sarah & Michael</h1>
+            <h1 className="text-5xl mb-2 font-serif">
+              {loading ? (
+                <span className="flex items-center justify-center gap-2 text-3xl">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  Loading...
+                </span>
+              ) : (
+                getCoupleNames()
+              )}
+            </h1>
             <div className="flex items-center justify-center gap-4 mt-4 mb-8">
               <div className="h-px w-12 bg-white/50" />
               <Heart className="w-6 h-6 text-rose-400 fill-rose-400" />
               <div className="h-px w-12 bg-white/50" />
             </div>
-            <p className="text-lg opacity-90">15 Juni 2026</p>
+            <p className="text-lg opacity-90">
+              {eventData ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
+            </p>
           </motion.div>
         </div>
       </motion.div>
@@ -117,7 +181,16 @@ export function Home() {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Tanggal</h3>
-                <p className="text-gray-900">Minggu, 15 Juni 2026</p>
+                <p className="text-gray-900">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </span>
+                  ) : (
+                    eventData ? formatDate(eventData.weddingDate) : defaultEventData.weddingDate
+                  )}
+                </p>
               </div>
             </div>
 
@@ -127,7 +200,16 @@ export function Home() {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Waktu</h3>
-                <p className="text-gray-900">14:00 - 17:00 WIB</p>
+                <p className="text-gray-900">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </span>
+                  ) : (
+                    eventData ? eventData.resepsiTime : defaultEventData.resepsiTime
+                  )}
+                </p>
               </div>
             </div>
 
@@ -137,7 +219,16 @@ export function Home() {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Lokasi</h3>
-                <p className="text-gray-900">The Grand Ballroom, Jakarta</p>
+                <p className="text-gray-900">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </span>
+                  ) : (
+                    eventData ? eventData.resepsiLocation : defaultEventData.resepsiLocation
+                  )}
+                </p>
               </div>
             </div>
           </div>
