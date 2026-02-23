@@ -5,21 +5,27 @@ import { useNavigate } from "react-router";
 import { getEventData, updateEventData, type EventData as ApiEventData } from "@/lib/api/admin";
 import { toast } from "sonner";
 
-interface EventData extends ApiEventData {}
+interface EventData extends Omit<ApiEventData, "id"> {
+  id?: string;
+}
+
+// Default values
+const defaultEventData: EventData = {
+  coupleName: "",
+  weddingDate: "",
+  akadTime: "",
+  akadLocation: "",
+  akadAddress: "",
+  resepsiTime: "",
+  resepsiLocation: "",
+  resepsiAddress: "",
+};
 
 export function EventManagement() {
-  const [eventData, setEventData] = useState<EventData>({
-    coupleName: "Sarah & Michael",
-    weddingDate: "2026-06-15",
-    akadTime: "09:00 - 11:00 WIB",
-    akadLocation: "Masjid Al-Ikhlas",
-    akadAddress: "Jl. Sudirman No. 123, Jakarta Pusat",
-    resepsiTime: "14:00 - 17:00 WIB",
-    resepsiLocation: "The Grand Ballroom",
-    resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
-  });
+  const [eventData, setEventData] = useState<EventData>(defaultEventData);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasData, setHasData] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,14 +43,59 @@ export function EventManagement() {
       setLoading(true);
       const data = await getEventData();
       if (data) {
-        setEventData(data);
+        setEventData({
+          ...data,
+          id: data.id || undefined,
+        });
+        setHasData(true);
+      } else {
+        // No data in database, use defaults
+        setEventData(defaultEventData);
+        setHasData(false);
       }
     } catch (error) {
       console.error("Error loading event data:", error);
       toast.error("Gagal memuat data acara");
+      setEventData(defaultEventData);
     } finally {
       setLoading(false);
     }
+  };
+
+  const validateForm = (): boolean => {
+    if (!eventData.coupleName.trim()) {
+      toast.error("Nama pasangan wajib diisi");
+      return false;
+    }
+    if (!eventData.weddingDate) {
+      toast.error("Tanggal pernikahan wajib diisi");
+      return false;
+    }
+    if (!eventData.akadTime.trim()) {
+      toast.error("Waktu akad wajib diisi");
+      return false;
+    }
+    if (!eventData.akadLocation.trim()) {
+      toast.error("Lokasi akad wajib diisi");
+      return false;
+    }
+    if (!eventData.akadAddress.trim()) {
+      toast.error("Alamat akad wajib diisi");
+      return false;
+    }
+    if (!eventData.resepsiTime.trim()) {
+      toast.error("Waktu resepsi wajib diisi");
+      return false;
+    }
+    if (!eventData.resepsiLocation.trim()) {
+      toast.error("Lokasi resepsi wajib diisi");
+      return false;
+    }
+    if (!eventData.resepsiAddress.trim()) {
+      toast.error("Alamat resepsi wajib diisi");
+      return false;
+    }
+    return true;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +107,19 @@ export function EventManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setSaving(true);
+
     try {
-      setSaving(true);
       const success = await updateEventData(eventData);
       if (success) {
         toast.success("Data acara berhasil disimpan!");
+        setHasData(true);
       } else {
         toast.error("Gagal menyimpan data acara");
       }
@@ -282,10 +341,16 @@ export function EventManagement() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="mt-6 bg-blue-50 rounded-2xl p-4"
+          className={`mt-6 rounded-2xl p-4 ${
+            hasData ? "bg-green-50" : "bg-blue-50"
+          }`}
         >
-          <p className="text-sm text-blue-800">
-            <strong>Catatan:</strong> Data tersimpan di database Supabase.
+          <p className={`text-sm ${hasData ? "text-green-800" : "text-blue-800"}`}>
+            <strong>Catatan:</strong>{" "}
+            {hasData 
+              ? "Data tersimpan di database Supabase. Klik 'Simpan Perubahan' untuk update."
+              : "Belum ada data acara. Silakan lengkapi form di atas untuk membuat data acara pertama kali."
+            }
           </p>
         </motion.div>
       </div>

@@ -168,6 +168,8 @@ export interface EventData {
   resepsiTime: string;
   resepsiLocation: string;
   resepsiAddress: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export async function getEventData(): Promise<EventData | null> {
@@ -178,7 +180,7 @@ export async function getEventData(): Promise<EventData | null> {
       .eq("id", "default")
       .single();
 
-    if (error) throw error;
+    if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
 
     return data;
   } catch (error) {
@@ -188,13 +190,34 @@ export async function getEventData(): Promise<EventData | null> {
 }
 
 /**
- * Update event data
+ * Update event data (upsert - update or insert)
  */
 export async function updateEventData(eventData: EventData): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from("Event")
-      .update({
+    // Check if event exists
+    const existing = await getEventData();
+
+    if (existing) {
+      // Update existing
+      const { error } = await supabase
+        .from("Event")
+        .update({
+          coupleName: eventData.coupleName,
+          weddingDate: eventData.weddingDate,
+          akadTime: eventData.akadTime,
+          akadLocation: eventData.akadLocation,
+          akadAddress: eventData.akadAddress,
+          resepsiTime: eventData.resepsiTime,
+          resepsiLocation: eventData.resepsiLocation,
+          resepsiAddress: eventData.resepsiAddress,
+        })
+        .eq("id", "default");
+
+      if (error) throw error;
+    } else {
+      // Insert new
+      const { error } = await supabase.from("Event").insert({
+        id: "default",
         coupleName: eventData.coupleName,
         weddingDate: eventData.weddingDate,
         akadTime: eventData.akadTime,
@@ -203,10 +226,10 @@ export async function updateEventData(eventData: EventData): Promise<boolean> {
         resepsiTime: eventData.resepsiTime,
         resepsiLocation: eventData.resepsiLocation,
         resepsiAddress: eventData.resepsiAddress,
-      })
-      .eq("id", "default");
+      });
 
-    if (error) throw error;
+      if (error) throw error;
+    }
 
     return true;
   } catch (error) {
