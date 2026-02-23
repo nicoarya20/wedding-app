@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { CheckCircle2, Users, Phone, Mail } from "lucide-react";
+import { CheckCircle2, Users, Phone, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { submitRSVP, type SubmitRSVP as RSVPData } from "@/lib/api/admin";
 
 export function RSVP() {
   const [formData, setFormData] = useState({
@@ -14,21 +15,47 @@ export function RSVP() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simpan ke localStorage (dalam implementasi nyata, ini akan dikirim ke backend)
-    const rsvps = JSON.parse(localStorage.getItem("rsvps") || "[]");
-    rsvps.push({
-      ...formData,
-      id: Date.now().toString(),
-      submittedAt: new Date().toISOString(),
-    });
-    localStorage.setItem("rsvps", JSON.stringify(rsvps));
+    // Validate form
+    if (!formData.name.trim()) {
+      toast.error("Nama lengkap wajib diisi");
+      return;
+    }
+    if (!formData.attendance) {
+      toast.error("Konfirmasi kehadiran wajib diisi");
+      return;
+    }
 
-    setSubmitted(true);
-    toast.success("RSVP berhasil dikirim!");
+    setSubmitting(true);
+
+    try {
+      const rsvpData: RSVPData = {
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        attendance: formData.attendance,
+        guestCount: formData.attendance === "hadir" ? formData.guestCount : null,
+        message: formData.message || null,
+      };
+
+      const result = await submitRSVP(rsvpData);
+
+      if (result.success) {
+        setSubmitted(true);
+        toast.success("RSVP berhasil dikirim!");
+      } else {
+        toast.error(result.error || "Gagal mengirim RSVP. Silakan coba lagi.");
+      }
+    } catch (error) {
+      console.error("Error submitting RSVP:", error);
+      toast.error("Gagal mengirim RSVP. Silakan coba lagi.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -215,9 +242,17 @@ export function RSVP() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-4 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md"
+            disabled={submitting}
+            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-4 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Kirim Konfirmasi
+            {submitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Mengirim...
+              </>
+            ) : (
+              "Kirim Konfirmasi"
+            )}
           </button>
         </motion.form>
 

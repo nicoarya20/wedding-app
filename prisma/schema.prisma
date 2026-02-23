@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Model untuk RSVP tamu undangan
+model Guest {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  attendance  String
+  guestCount  String?
+  message     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Model untuk ucapan dan doa dari tamu
+model Wish {
+  id        String   @id @default(cuid())
+  name      String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+/// Model untuk pengaturan acara pernikahan
+model Event {
+  id                 String   @id @default(cuid())
+  coupleName         String
+  weddingDate        String
+  akadTime           String
+  akadLocation       String
+  akadAddress        String
+  resepsiTime        String
+  resepsiLocation    String
+  resepsiAddress     String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+/// Model untuk admin users
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+        
