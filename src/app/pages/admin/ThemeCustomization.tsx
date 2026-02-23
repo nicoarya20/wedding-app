@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Palette, Save, Loader2, ArrowLeft } from "lucide-react";
+import { Palette, Save, Loader2, ArrowLeft, Menu } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { 
   getWeddingByUserId, 
@@ -191,11 +191,20 @@ export function ThemeCustomization() {
                 {wedding?.coupleName || "Loading..."}
               </p>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/admin/dashboard/users/${userId}/wedding/menu`)}
+                className="bg-gray-100 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-200 transition-all flex items-center gap-2"
+                title="Customize Menu"
+              >
+                <Menu className="w-5 h-5" />
+                <span className="hidden sm:inline">Menu</span>
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
               {saving ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -207,7 +216,8 @@ export function ThemeCustomization() {
                   Simpan
                 </>
               )}
-            </button>
+              </button>
+            </div>
           </div>
         </motion.div>
 
