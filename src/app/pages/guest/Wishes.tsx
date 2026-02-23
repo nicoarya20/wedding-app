@@ -2,14 +2,9 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Heart, MessageSquare, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/api/admin";
+import { getWishes, submitWish, type Wish as ApiWish, type SubmitWish } from "@/lib/api/admin";
 
-interface Wish {
-  id: string;
-  name: string;
-  message: string;
-  createdAt: string;
-}
+interface Wish extends ApiWish {}
 
 export function Wishes() {
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -27,14 +22,8 @@ export function Wishes() {
   const loadWishes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("Wish")
-        .select("*")
-        .order("createdAt", { ascending: false });
-
-      if (error) throw error;
-
-      setWishes(data || []);
+      const data = await getWishes();
+      setWishes(data);
     } catch (error) {
       console.error("Error loading wishes:", error);
       toast.error("Gagal memuat ucapan");
@@ -54,16 +43,20 @@ export function Wishes() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.from("Wish").insert({
+      const wishData: SubmitWish = {
         name: formData.name,
         message: formData.message,
-      });
+      };
 
-      if (error) throw error;
+      const result = await submitWish(wishData);
 
-      await loadWishes();
-      setFormData({ name: "", message: "" });
-      toast.success("Ucapan berhasil dikirim!");
+      if (result.success) {
+        await loadWishes();
+        setFormData({ name: "", message: "" });
+        toast.success("Ucapan berhasil dikirim!");
+      } else {
+        toast.error(result.error || "Gagal mengirim ucapan. Silakan coba lagi.");
+      }
     } catch (error) {
       console.error("Error submitting wish:", error);
       toast.error("Gagal mengirim ucapan. Silakan coba lagi.");

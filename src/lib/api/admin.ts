@@ -139,6 +139,33 @@ export async function getGuests(searchQuery?: string, filter?: string): Promise<
 }
 
 /**
+ * Submit wish (guest-facing)
+ */
+export interface SubmitWish {
+  name: string;
+  message: string;
+}
+
+export async function submitWish(data: SubmitWish): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.from("Wish").insert({
+      name: data.name,
+      message: data.message,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting wish:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
  * Fetch all wishes
  */
 export interface Wish {
