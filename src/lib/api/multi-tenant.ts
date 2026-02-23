@@ -1,0 +1,640 @@
+import { createClient } from "@supabase/supabase-js";
+
+// Supabase configuration
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// ==================== USER/WEDDING OWNER APIS ====================
+
+/**
+ * Create new user (wedding owner)
+ */
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export async function createUser(data: CreateUserInput): Promise<{ success: boolean; userId?: string; error?: string }> {
+  try {
+    const { data: user, error } = await supabase
+      .from("User")
+      .insert({
+        email: data.email,
+        password: data.password, // TODO: Hash this in production
+        name: data.name,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, userId: user.id };
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get all users
+ */
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const { data, error } = await supabase
+      .from("User")
+      .select("*")
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+}
+
+// ==================== WEDDING CONFIG APIS ====================
+
+/**
+ * Create wedding for user
+ */
+export interface CreateWeddingInput {
+  userId: string;
+  slug: string;
+  coupleName: string;
+  weddingDate: string;
+  theme?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  fontFamily?: string;
+}
+
+export interface Wedding {
+  id: string;
+  userId: string;
+  slug: string;
+  coupleName: string;
+  weddingDate: string;
+  theme: string;
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createWedding(data: CreateWeddingInput): Promise<{ success: boolean; weddingId?: string; error?: string }> {
+  try {
+    const { data: wedding, error } = await supabase
+      .from("Wedding")
+      .insert({
+        userId: data.userId,
+        slug: data.slug,
+        coupleName: data.coupleName,
+        weddingDate: data.weddingDate,
+        theme: data.theme || "rose",
+        primaryColor: data.primaryColor || "#e11d48",
+        secondaryColor: data.secondaryColor || "#ec4899",
+        fontFamily: data.fontFamily || "serif",
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Create default menu config
+    await createMenuConfig({ weddingId: wedding.id });
+
+    return { success: true, weddingId: wedding.id };
+  } catch (error) {
+    console.error("Error creating wedding:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get wedding by slug (for guest access)
+ */
+export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
+  try {
+    const { data, error } = await supabase
+      .from("Wedding")
+      .select("*")
+      .eq("slug", slug)
+      .eq("isActive", true)
+      .single();
+
+    if (error || !data) return null;
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching wedding:", error);
+    return null;
+  }
+}
+
+/**
+ * Get wedding by user ID
+ */
+export async function getWeddingByUserId(userId: string): Promise<Wedding | null> {
+  try {
+    const { data, error } = await supabase
+      .from("Wedding")
+      .select("*")
+      .eq("userId", userId)
+      .single();
+
+    if (error || !data) return null;
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching wedding:", error);
+    return null;
+  }
+}
+
+/**
+ * Update wedding theme
+ */
+export async function updateWeddingTheme(weddingId: string, theme: string, primaryColor: string, secondaryColor: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("Wedding")
+      .update({
+        theme,
+        primaryColor,
+        secondaryColor,
+      })
+      .eq("id", weddingId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error updating theme:", error);
+    return false;
+  }
+}
+
+// ==================== MENU CONFIG APIS ====================
+
+/**
+ * Create menu config
+ */
+export interface CreateMenuConfigInput {
+  weddingId: string;
+  showHome?: boolean;
+  showDetails?: boolean;
+  showRsvp?: boolean;
+  showGallery?: boolean;
+  showWishes?: boolean;
+  customOrder?: string;
+}
+
+export interface MenuConfig {
+  id: string;
+  weddingId: string;
+  showHome: boolean;
+  showDetails: boolean;
+  showRsvp: boolean;
+  showGallery: boolean;
+  showWishes: boolean;
+  customOrder: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createMenuConfig(data: CreateMenuConfigInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from("MenuConfig")
+      .insert({
+        weddingId: data.weddingId,
+        showHome: data.showHome ?? true,
+        showDetails: data.showDetails ?? true,
+        showRsvp: data.showRsvp ?? true,
+        showGallery: data.showGallery ?? true,
+        showWishes: data.showWishes ?? true,
+        customOrder: data.customOrder || "home,details,rsvp,gallery,wishes",
+      });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating menu config:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get menu config by wedding ID
+ */
+export async function getMenuConfigByWeddingId(weddingId: string): Promise<MenuConfig | null> {
+  try {
+    const { data, error } = await supabase
+      .from("MenuConfig")
+      .select("*")
+      .eq("weddingId", weddingId)
+      .single();
+
+    if (error || !data) return null;
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching menu config:", error);
+    return null;
+  }
+}
+
+/**
+ * Update menu config
+ */
+export async function updateMenuConfig(weddingId: string, updates: Partial<MenuConfig>): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("MenuConfig")
+      .update(updates)
+      .eq("weddingId", weddingId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error updating menu config:", error);
+    return false;
+  }
+}
+
+// ==================== EVENT APIS ====================
+
+/**
+ * Create event
+ */
+export interface CreateEventInput {
+  weddingId: string;
+  type: "akad" | "resepsi";
+  date: string;
+  time: string;
+  location: string;
+  address: string;
+  mapUrl?: string;
+  imageUrl?: string;
+  order?: number;
+}
+
+export interface Event {
+  id: string;
+  weddingId: string;
+  type: string;
+  date: string;
+  time: string;
+  location: string;
+  address: string;
+  mapUrl: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createEvent(data: CreateEventInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from("Event")
+      .insert({
+        weddingId: data.weddingId,
+        type: data.type,
+        date: data.date,
+        time: data.time,
+        location: data.location,
+        address: data.address,
+        mapUrl: data.mapUrl,
+        imageUrl: data.imageUrl,
+        order: data.order ?? 0,
+      });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating event:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get events by wedding ID
+ */
+export async function getEventsByWeddingId(weddingId: string): Promise<Event[]> {
+  try {
+    const { data, error } = await supabase
+      .from("Event")
+      .select("*")
+      .eq("weddingId", weddingId)
+      .eq("isActive", true)
+      .order("order", { ascending: true });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    return [];
+  }
+}
+
+/**
+ * Update event
+ */
+export async function updateEvent(eventId: string, updates: Partial<Event>): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("Event")
+      .update(updates)
+      .eq("id", eventId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error updating event:", error);
+    return false;
+  }
+}
+
+/**
+ * Delete event
+ */
+export async function deleteEvent(eventId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("Event")
+      .delete()
+      .eq("id", eventId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    return false;
+  }
+}
+
+// ==================== GALLERY APIS ====================
+
+/**
+ * Create gallery photo
+ */
+export interface CreateGalleryInput {
+  weddingId: string;
+  imageUrl: string;
+  caption?: string;
+  order?: number;
+}
+
+export interface GalleryPhoto {
+  id: string;
+  weddingId: string;
+  imageUrl: string;
+  caption: string | null;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export async function createGalleryPhoto(data: CreateGalleryInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from("Gallery")
+      .insert({
+        weddingId: data.weddingId,
+        imageUrl: data.imageUrl,
+        caption: data.caption,
+        order: data.order ?? 0,
+      });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating gallery photo:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get gallery by wedding ID
+ */
+export async function getGalleryByWeddingId(weddingId: string): Promise<GalleryPhoto[]> {
+  try {
+    const { data, error } = await supabase
+      .from("Gallery")
+      .select("*")
+      .eq("weddingId", weddingId)
+      .eq("isActive", true)
+      .order("order", { ascending: true });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching gallery:", error);
+    return [];
+  }
+}
+
+/**
+ * Delete gallery photo
+ */
+export async function deleteGalleryPhoto(photoId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("Gallery")
+      .delete()
+      .eq("id", photoId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting gallery photo:", error);
+    return false;
+  }
+}
+
+// ==================== GUEST & WISH APIS (Multi-tenant) ====================
+
+/**
+ * Submit RSVP (with wedding ID)
+ */
+export interface SubmitRSVP {
+  weddingId?: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  attendance: string;
+  guestCount?: string | null;
+  message?: string | null;
+}
+
+export async function submitRSVP(data: SubmitRSVP): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.from("Guest").insert({
+      weddingId: data.weddingId || null,
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      attendance: data.attendance,
+      guestCount: data.attendance === "hadir" ? data.guestCount : null,
+      message: data.message || null,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting RSVP:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get guests by wedding ID
+ */
+export interface Guest {
+  id: string;
+  weddingId: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  attendance: string;
+  guestCount: string | null;
+  message: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getGuestsByWeddingId(weddingId: string): Promise<Guest[]> {
+  try {
+    const { data, error } = await supabase
+      .from("Guest")
+      .select("*")
+      .eq("weddingId", weddingId)
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching guests:", error);
+    return [];
+  }
+}
+
+/**
+ * Submit wish (with wedding ID)
+ */
+export interface SubmitWish {
+  weddingId?: string;
+  name: string;
+  message: string;
+}
+
+export async function submitWish(data: SubmitWish): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.from("Wish").insert({
+      weddingId: data.weddingId || null,
+      name: data.name,
+      message: data.message,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting wish:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
+ * Get wishes by wedding ID
+ */
+export interface Wish {
+  id: string;
+  weddingId: string | null;
+  name: string;
+  message: string;
+  createdAt: string;
+}
+
+export async function getWishesByWeddingId(weddingId: string): Promise<Wish[]> {
+  try {
+    const { data, error } = await supabase
+      .from("Wish")
+      .select("*")
+      .eq("weddingId", weddingId)
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching wishes:", error);
+    return [];
+  }
+}
+
+/**
+ * Delete wish
+ */
+export async function deleteWish(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("Wish").delete().eq("id", id);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting wish:", error);
+    return false;
+  }
+}

@@ -8,9 +8,99 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+/// User/Owner wedding (customer yang bikin undangan)
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  wedding      Wedding?
+  admin        Admin?
+}
+
+/// Wedding configuration per user
+model Wedding {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  slug            String   @unique // Unique URL: wedding-app.com/w/sarah-michael
+  coupleName      String
+  weddingDate     String
+  theme           String   @default("rose") // rose, green, blue, purple, gold
+  primaryColor    String   @default("#e11d48")
+  secondaryColor  String   @default("#ec4899")
+  fontFamily      String   @default("serif")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events          Event[]
+  menuConfig      MenuConfig?
+  gallery         Gallery[]
+  
+  @@index([slug])
+}
+
+/// Menu configuration per wedding
+model MenuConfig {
+  id          String   @id @default(cuid())
+  weddingId   String   @unique
+  showHome    Boolean  @default(true)
+  showDetails Boolean  @default(true)
+  showRsvp    Boolean  @default(true)
+  showGallery Boolean  @default(true)
+  showWishes  Boolean  @default(true)
+  customOrder String   @default("home,details,rsvp,gallery,wishes")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  wedding     Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+}
+
+/// Event details per wedding
+model Event {
+  id              String   @id @default(cuid())
+  weddingId       String
+  type            String   // "akad" or "resepsi"
+  date            String
+  time            String
+  location        String
+  address         String
+  mapUrl          String?
+  imageUrl        String?
+  isActive        Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  wedding         Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  
+  @@index([weddingId])
+}
+
+/// Gallery photos per wedding
+model Gallery {
+  id        String   @id @default(cuid())
+  weddingId String
+  imageUrl  String
+  caption   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  
+  @@index([weddingId])
+}
+
 /// Model untuk RSVP tamu undangan
 model Guest {
   id          String   @id @default(cuid())
+  weddingId   String?  // null = global, or linked to specific wedding
   name        String
   email       String?
   phone       String?
@@ -19,36 +109,30 @@ model Guest {
   message     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  @@index([weddingId])
 }
 
 /// Model untuk ucapan dan doa dari tamu
 model Wish {
   id        String   @id @default(cuid())
+  weddingId String?  // null = global, or linked to specific wedding
   name      String
   message   String
   createdAt DateTime @default(now())
+  
+  @@index([weddingId])
 }
 
-/// Model untuk pengaturan acara pernikahan
-model Event {
-  id                 String   @id @default(cuid())
-  coupleName         String
-  weddingDate        String
-  akadTime           String
-  akadLocation       String
-  akadAddress        String
-  resepsiTime        String
-  resepsiLocation    String
-  resepsiAddress     String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-}
-
-/// Model untuk admin users
+/// Model untuk admin users (super admin)
 model Admin {
   id        String   @id @default(cuid())
+  userId    String?  @unique // Link to User if admin is also a wedding owner
   username  String   @unique
   password  String
+  role      String   @default("admin") // admin, superadmin
   createdAt DateTime @default(now())
+  
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
         
