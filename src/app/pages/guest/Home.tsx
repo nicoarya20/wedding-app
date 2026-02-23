@@ -1,9 +1,9 @@
-import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { Calendar, Clock, Heart, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Heart, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
+import { toast } from "sonner";
 
 // Default fallback data
 const defaultEventData: PublicEventData = {
