@@ -1,9 +1,21 @@
+import { useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { LayoutDashboard, Users, MessageSquare, Calendar, LogOut, UserCog } from "lucide-react";
+import { isAuthenticated, removeAuthToken, getCurrentUser } from "@/lib/auth";
+import { toast } from "sonner";
 
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const user = getCurrentUser();
+
+  useEffect(() => {
+    // Check authentication on mount
+    if (!isAuthenticated()) {
+      toast.error("Silakan login terlebih dahulu");
+      navigate("/admin");
+    }
+  }, [navigate]);
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
@@ -14,9 +26,15 @@ export function AdminLayout() {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("adminLoggedIn");
+    removeAuthToken();
+    toast.success("Logout berhasil");
     navigate("/admin");
   };
+
+  // If not authenticated, don't render the layout
+  if (!isAuthenticated()) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

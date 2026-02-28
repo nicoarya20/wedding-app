@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { GuestLayout } from "./components/layouts/GuestLayout";
 import { AdminLayout } from "./components/layouts/AdminLayout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Home } from "./pages/guest/Home";
 import { EventDetails } from "./pages/guest/EventDetails";
 import { RSVP } from "./pages/guest/RSVP";
@@ -34,7 +35,11 @@ export const router = createBrowserRouter([
       { index: true, Component: AdminLogin },
       {
         path: "dashboard",
-        Component: AdminLayout,
+        Component: () => (
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
         children: [
           { index: true, Component: AdminDashboard },
           { path: "users", Component: UserManagement },

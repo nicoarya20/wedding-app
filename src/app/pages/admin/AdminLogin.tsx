@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Lock, User, LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { loginAdmin } from "@/lib/api/admin";
+import { saveAuthToken } from "@/lib/auth";
 
 export function AdminLogin() {
   const [credentials, setCredentials] = useState({
@@ -18,14 +19,15 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      const success = await loginAdmin(credentials.username, credentials.password);
+      const result = await loginAdmin(credentials.username, credentials.password);
 
-      if (success) {
-        localStorage.setItem("adminLoggedIn", "true");
+      if (result.success && result.token) {
+        // Save JWT token to localStorage
+        saveAuthToken(result.token);
         toast.success("Login berhasil!");
         navigate("/admin/dashboard");
       } else {
-        toast.error("Username atau password salah!");
+        toast.error(result.error || "Username atau password salah!");
       }
     } catch (error) {
       console.error("Login error:", error);

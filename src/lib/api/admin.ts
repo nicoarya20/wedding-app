@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { comparePassword, generateToken } from "../auth";
 
 // Supabase configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -333,22 +334,40 @@ export async function updateEventData(eventData: EventData): Promise<boolean> {
 }
 
 /**
- * Admin authentication
+ * Admin authentication with JWT token
  */
-export async function loginAdmin(username: string, password: string): Promise<boolean> {
+export async function loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
   try {
-    const { data, error } = await supabase
+    const { data: admin, error } = await supabase
       .from("Admin")
-      .select("username")
+      .select("id, username, password, role")
       .eq("username", username)
-      .eq("password", password)
       .single();
 
-    if (error) throw error;
+    if (error || !admin) {
+      return { success: false, error: "Username tidak ditemukan" };
+    }
 
-    return !!data;
+    // Compare password with hash
+    const isValidPassword = await comparePassword(password, admin.password);
+    
+    if (!isValidPassword) {
+      return { success: false, error: "Password salah" };
+    }
+
+    // Generate JWT token
+    const token = generateToken({
+      userId: admin.id,
+      username: admin.username,
+      role: admin.role,
+    });
+
+    return { success: true, token };
   } catch (error) {
     console.error("Error logging in admin:", error);
-    return false;
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    };
   }
 }

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -172,12 +173,13 @@ async function pushSchema() {
 
     // Seed default super admin
     const adminExists = await prisma.admin.findFirst({ where: { username: "admin" } });
-    
+
     if (!adminExists) {
+      const hashedPassword = await bcrypt.hash("admin123", 10);
       await prisma.admin.create({
         data: {
           username: "admin",
-          password: "admin123",
+          password: hashedPassword,
           role: "superadmin",
         },
       });
