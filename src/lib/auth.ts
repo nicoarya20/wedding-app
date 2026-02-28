@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = import.meta.env.VITE_JWT_SECRET || 'fallback-secret-change-this-in-production';
-const JWT_EXPIRATION = '7d';
+// JWT_SECRET and JWT_EXPIRATION are reserved for future server-side implementation
+// Currently using demo token-based auth for client-side only
 
 /**
  * Hash a password using bcrypt

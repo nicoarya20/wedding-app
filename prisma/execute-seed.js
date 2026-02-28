@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+/* eslint-disable no-undef */
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -7,8 +7,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 const databaseUrl = process.env.DATABASE_URL;
 
 console.log('🚀 Starting database seed...\n');

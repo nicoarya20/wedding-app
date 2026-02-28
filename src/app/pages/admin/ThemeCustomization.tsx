@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
 import { Palette, Save, Loader2, ArrowLeft, Menu } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
@@ -88,7 +88,7 @@ export function ThemeCustomization() {
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    if (!localStorage.getItem("adminAuthToken")) {
       navigate("/admin");
       return;
     }
@@ -96,13 +96,13 @@ export function ThemeCustomization() {
     if (userId) {
       loadWedding(userId);
     }
-  }, [userId, navigate]);
+  }, [userId, navigate, loadWedding]);
 
-  const loadWedding = async (uid: string) => {
+  const loadWedding = useCallback(async (uid: string) => {
     try {
       setLoading(true);
       const data = await getWeddingByUserId(uid);
-      
+
       if (data) {
         setWedding(data);
         setSelectedTheme(data.theme);
@@ -120,7 +120,7 @@ export function ThemeCustomization() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   const handleThemeSelect = (themeId: string) => {
     setSelectedTheme(themeId);

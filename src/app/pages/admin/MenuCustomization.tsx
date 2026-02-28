@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, Reorder } from "motion/react";
 import { Menu, Save, Loader2, ArrowLeft, GripVertical, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
@@ -38,7 +38,7 @@ export function MenuCustomization() {
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    if (!localStorage.getItem("adminAuthToken")) {
       navigate("/admin");
       return;
     }
@@ -46,17 +46,17 @@ export function MenuCustomization() {
     if (userId) {
       loadData(userId);
     }
-  }, [userId, navigate]);
+  }, [userId, navigate, loadData]);
 
-  const loadData = async (uid: string) => {
+  const loadData = useCallback(async (uid: string) => {
     try {
       setLoading(true);
-      
+
       // Load wedding info
       const wedding = await getWeddingByUserId(uid);
       if (wedding) {
         setCoupleName(wedding.coupleName);
-        
+
         // Load menu config
         const config = await getMenuConfigByWeddingId(wedding.id);
         if (config) {
@@ -78,7 +78,7 @@ export function MenuCustomization() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   const toggleVisibility = (key: string) => {
     setMenuItems(items =>

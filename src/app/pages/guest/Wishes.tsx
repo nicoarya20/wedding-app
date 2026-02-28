@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
 import { Heart, MessageSquare, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,11 +20,7 @@ export function Wishes({ weddingSlug }: WishesProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadWishes();
-  }, []);
-
-  const loadWishes = async () => {
+  const loadWishes = useCallback(async () => {
     try {
       setLoading(true);
       // Use multi-tenant API if weddingSlug is provided
@@ -37,7 +33,11 @@ export function Wishes({ weddingSlug }: WishesProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [weddingSlug]);
+
+  useEffect(() => {
+    loadWishes();
+  }, [loadWishes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

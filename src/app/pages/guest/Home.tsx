@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 import { Heart, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
@@ -83,9 +83,11 @@ export function Home({ weddingSlug }: HomeProps) {
   };
 
   // Parse wedding date for countdown
-  const weddingDate = eventData 
-    ? new Date(`${eventData.weddingDate}T14:00:00`)
-    : new Date("2026-06-15T14:00:00");
+  const weddingDate = useMemo(() => {
+    return eventData
+      ? new Date(`${eventData.weddingDate}T14:00:00`)
+      : new Date("2026-06-15T14:00:00");
+  }, [eventData]);
 
   useEffect(() => {
     const timer = setInterval(() => {

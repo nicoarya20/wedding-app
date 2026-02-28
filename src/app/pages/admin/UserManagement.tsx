@@ -22,7 +22,7 @@ export function UserManagement() {
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    if (!localStorage.getItem("adminAuthToken")) {
       navigate("/admin");
       return;
     }

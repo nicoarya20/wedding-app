@@ -18,13 +18,13 @@ export function GuestList() {
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    if (!localStorage.getItem("adminAuthToken")) {
       navigate("/admin");
       return;
     }
 
     loadGuests();
-  }, [navigate]);
+  }, [navigate, loadGuests]);
 
   const loadGuests = useCallback(async (isRefresh = false) => {
     try {
@@ -48,7 +48,7 @@ export function GuestList() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast, searchQuery, filter]);
+  }, [searchQuery, filter]);
 
   // Debounced search - triggers on searchQuery change
   useEffect(() => {

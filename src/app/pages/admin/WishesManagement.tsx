@@ -29,13 +29,13 @@ export function WishesManagement() {
 
   useEffect(() => {
     // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
+    if (!localStorage.getItem("adminAuthToken")) {
       navigate("/admin");
       return;
     }
 
     loadWishes();
-  }, [navigate]);
+  }, [navigate, loadWishes]);
 
   const loadWishes = useCallback(async (isRefresh = false) => {
     try {
@@ -59,7 +59,7 @@ export function WishesManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast, searchQuery]);
+  }, [searchQuery]);
 
   // Debounced search - triggers on searchQuery change
   useEffect(() => {
