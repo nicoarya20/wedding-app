@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = import.meta.env.VITE_JWT_SECRET || 'fallback-secret-change-this-in-production';
 const JWT_EXPIRATION = '7d';
@@ -23,18 +22,34 @@ export async function comparePassword(
 }
 
 /**
- * Generate a JWT token
+ * Simple token generation using base64 (for client-side only)
+ * Note: This is NOT secure like JWT, but works for demo purposes
+ * For production, use server-side JWT or session-based auth
  */
 export function generateToken(payload: { userId: string; username: string; role?: string }): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+  // Simple base64 encoding (NOT secure, just for demo)
+  const encoded = btoa(JSON.stringify({
+    ...payload,
+    exp: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+  }));
+  return `demo_token_${encoded}`;
 }
 
 /**
- * Verify and decode a JWT token
+ * Verify and decode a token
  */
 export function verifyToken(token: string): { userId: string; username: string; role?: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string; username: string; role?: string };
+    if (!token.startsWith('demo_token_')) return null;
+    const encoded = token.replace('demo_token_', '');
+    const decoded = JSON.parse(atob(encoded));
+    
+    // Check expiration
+    if (decoded.exp && decoded.exp < Date.now()) {
+      return null;
+    }
+    
+    return decoded;
   } catch (error) {
     console.error('Token verification failed:', error);
     return null;
