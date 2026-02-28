@@ -19,9 +19,9 @@ export function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if admin is logged in
-    const adminLoggedIn = localStorage.getItem("adminLoggedIn");
-    if (!adminLoggedIn) {
+    // Check if admin is authenticated using JWT token
+    const authToken = localStorage.getItem("adminAuthToken");
+    if (!authToken) {
       navigate("/admin");
       return;
     }
