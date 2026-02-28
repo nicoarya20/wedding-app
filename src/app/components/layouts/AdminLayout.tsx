@@ -10,11 +10,41 @@ export function AdminLayout() {
 
   useEffect(() => {
     // Check authentication on mount
-    if (!isAuthenticated()) {
+    const token = localStorage.getItem('adminAuthToken');
+    console.log('[AdminLayout] Auth check:', {
+      hasToken: !!token,
+      tokenPrefix: token?.substring(0, 20),
+      pathname: location.pathname,
+    });
+    
+    if (!token) {
+      console.warn('[AdminLayout] No token found, redirecting to login');
       toast.error("Silakan login terlebih dahulu");
       navigate("/admin");
+      return;
     }
-  }, [navigate]);
+    
+    // Verify token
+    try {
+      const encoded = token.replace('demo_token_', '');
+      const decoded = JSON.parse(atob(encoded));
+      
+      if (decoded.exp && decoded.exp < Date.now()) {
+        console.warn('[AdminLayout] Token expired, redirecting to login');
+        removeAuthToken();
+        toast.error("Sesi telah berakhir, silakan login kembali");
+        navigate("/admin");
+        return;
+      }
+      
+      console.log('[AdminLayout] Token valid, username:', decoded.username);
+    } catch (error) {
+      console.error('[AdminLayout] Token verification failed:', error);
+      removeAuthToken();
+      toast.error("Token tidak valid, silakan login kembali");
+      navigate("/admin");
+    }
+  }, []); // Empty dependency array - only check on mount, not on every navigation
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
