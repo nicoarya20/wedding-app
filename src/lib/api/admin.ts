@@ -225,27 +225,66 @@ export async function deleteWish(id: string): Promise<boolean> {
 
 /**
  * Fetch event data (public access for guest pages)
+ * NOTE: Deprecated. Use multi-tenant API (getWeddingData) instead.
  */
 export interface PublicEventData {
-  coupleName: string;
-  weddingDate: string;
-  akadTime: string;
-  akadLocation: string;
-  akadAddress: string;
-  resepsiTime: string;
-  resepsiLocation: string;
-  resepsiAddress: string;
+  coupleName?: string;
+  weddingDate?: string;
+  akadTime?: string;
+  akadLocation?: string;
+  akadAddress?: string;
+  resepsiTime?: string;
+  resepsiLocation?: string;
+  resepsiAddress?: string;
 }
 
 export async function getPublicEventData(): Promise<PublicEventData | null> {
   try {
+    // Try new multi-tenant schema first
+    const { data: weddingData, error: weddingError } = await supabase
+      .from("Wedding")
+      .select(`
+        coupleName,
+        weddingDate,
+        Event (
+          type,
+          time,
+          location,
+          address
+        )
+      `)
+      .eq("slug", "sarah-michael")
+      .single();
+
+    if (weddingError && weddingError.code !== "PGRST116") {
+      console.error("Error fetching wedding data:", weddingError);
+    }
+
+    if (weddingData && weddingData.Event) {
+      const events = weddingData.Event as any[];
+      const akadEvent = events.find(e => e.type === "akad");
+      const resepsiEvent = events.find(e => e.type === "resepsi");
+
+      return {
+        coupleName: weddingData.coupleName,
+        weddingDate: weddingData.weddingDate,
+        akadTime: akadEvent?.time || "",
+        akadLocation: akadEvent?.location || "",
+        akadAddress: akadEvent?.address || "",
+        resepsiTime: resepsiEvent?.time || "",
+        resepsiLocation: resepsiEvent?.location || "",
+        resepsiAddress: resepsiEvent?.address || "",
+      };
+    }
+
+    // Fallback to old schema (will return null if table doesn't exist)
     const { data, error } = await supabase
       .from("Event")
       .select("coupleName, weddingDate, akadTime, akadLocation, akadAddress, resepsiTime, resepsiLocation, resepsiAddress")
       .eq("id", "default")
       .single();
 
-    if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+    if (error && error.code !== "PGRST116") throw error;
 
     return data;
   } catch (error) {
@@ -256,30 +295,71 @@ export async function getPublicEventData(): Promise<PublicEventData | null> {
 
 /**
  * Fetch event data (admin access)
+ * NOTE: This is deprecated. Use multi-tenant API instead.
+ * Kept for backward compatibility with old schema.
  */
 export interface EventData {
   id?: string;
-  coupleName: string;
-  weddingDate: string;
-  akadTime: string;
-  akadLocation: string;
-  akadAddress: string;
-  resepsiTime: string;
-  resepsiLocation: string;
-  resepsiAddress: string;
+  coupleName?: string;     // Optional - comes from Wedding relation now
+  weddingDate?: string;    // Optional - comes from Wedding relation now
+  akadTime?: string;
+  akadLocation?: string;
+  akadAddress?: string;
+  resepsiTime?: string;
+  resepsiLocation?: string;
+  resepsiAddress?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export async function getEventData(): Promise<EventData | null> {
   try {
+    // Try to fetch from new multi-tenant schema first
+    const { data: weddingData, error: weddingError } = await supabase
+      .from("Wedding")
+      .select(`
+        coupleName,
+        weddingDate,
+        Event (
+          akad: type,
+          date,
+          time,
+          location,
+          address
+        )
+      `)
+      .eq("slug", "sarah-michael")
+      .single();
+
+    if (weddingError && weddingError.code !== "PGRST116") {
+      console.error("Error fetching wedding data:", weddingError);
+    }
+
+    if (weddingData && weddingData.Event) {
+      const events = weddingData.Event as any[];
+      const akadEvent = events.find(e => e.type === "akad");
+      const resepsiEvent = events.find(e => e.type === "resepsi");
+
+      return {
+        coupleName: weddingData.coupleName,
+        weddingDate: weddingData.weddingDate,
+        akadTime: akadEvent?.time || "",
+        akadLocation: akadEvent?.location || "",
+        akadAddress: akadEvent?.address || "",
+        resepsiTime: resepsiEvent?.time || "",
+        resepsiLocation: resepsiEvent?.location || "",
+        resepsiAddress: resepsiEvent?.address || "",
+      };
+    }
+
+    // Fallback: try old schema (for backward compatibility)
     const { data, error } = await supabase
       .from("Event")
       .select("*")
       .eq("id", "default")
       .single();
 
-    if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+    if (error && error.code !== "PGRST116") throw error;
 
     return data;
   } catch (error) {
