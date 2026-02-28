@@ -155,20 +155,22 @@ ALTER TABLE "Admin" ADD CONSTRAINT "Admin_userId_fkey"
 -- ============================================
 
 -- 11. Create Admin (password: admin123)
+-- Hash generated with bcrypt: bcrypt.hash('admin123', 10)
 INSERT INTO "Admin" ("id", "username", "password", "role") 
 VALUES (
     'admin-001',
     'admin',
-    '$2a$10$rMx9YQYxQYxQYxQYxQYxQuQYxQYxQYxQYxQYxQYxQYxQYxQYxQYxQ', -- bcrypt hash of 'admin123'
+    '$2b$10$v0UeB9SoPOmBZUcWzZ2RKeYufkUDZBGKaWfC29TNYRNIyLLFmr8q.',
     'superadmin'
 ) ON CONFLICT ("username") DO NOTHING;
 
 -- 12. Create Demo User (password: password123)
+-- Hash generated with bcrypt: bcrypt.hash('password123', 10)
 INSERT INTO "User" ("id", "email", "password", "name", "createdAt", "updatedAt") 
 VALUES (
     'user-001',
     'user@example.com',
-    '$2a$10$rMx9YQYxQYxQYxQYxQYxQuQYxQYxQYxQYxQYxQYxQYxQYxQYxQYxQ', -- bcrypt hash of 'password123'
+    '$2b$10$w1g00govmPebcP6ERRQojeuFLD.qCC4ShptzsbLqs4muDwAbzaBtG',
     'Demo User',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
