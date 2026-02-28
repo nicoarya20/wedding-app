@@ -1,27 +1,68 @@
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { getGalleryByWeddingId } from "@/lib/api/multi-tenant";
+import { toast } from "sonner";
 
-export function Gallery() {
-  const photos = [
-    {
-      url: "https://images.unsplash.com/photo-1768900043796-5ca3c0fe760b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwY291cGxlJTIwcm9tYW50aWMlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE1Nzc5NzB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      caption: "Our Love Story",
-      tall: true,
-    },
-    {
-      url: "https://images.unsplash.com/photo-1769038942266-128df3805a8f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyb21hbnRpYyUyMHdlZGRpbmclMjBjb3VwbGUlMjBoYW5kc3xlbnwxfHx8fDE3NzE2ODUwNTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      caption: "Together Forever",
-    },
-    {
-      url: "https://images.unsplash.com/photo-1767986012138-4893f40932d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwY2VyZW1vbnklMjB2ZW51ZSUyMGVsZWdhbnR8ZW58MXx8fHwxNzcxNjg1MDU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      caption: "Special Moments",
-    },
-    {
-      url: "https://images.unsplash.com/photo-1768777270963-8289ea9d870d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwcmVjZXB0aW9uJTIwZGVjb3JhdGlvbiUyMGZsb3dlcnN8ZW58MXx8fHwxNzcxNjg1MDU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      caption: "Beautiful Setup",
-      tall: true,
-    },
-  ];
+interface GalleryProps {
+  weddingSlug?: string;
+}
+
+export function Gallery({ weddingSlug }: GalleryProps) {
+  const [photos, setPhotos] = useState<Array<{ url: string; caption?: string; tall?: boolean }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingGallery(weddingSlug);
+    } else {
+      // Use hardcoded photos for non-wedding routes
+      setPhotos([
+        {
+          url: "https://images.unsplash.com/photo-1768900043796-5ca3c0fe760b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwY291cGxlJTIwcm9tYW50aWMlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE1Nzc5NzB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          caption: "Our Love Story",
+          tall: true,
+        },
+        {
+          url: "https://images.unsplash.com/photo-1769038942266-128df3805a8f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyb21hbnRpYyUyMHdlZGRpbmclMjBjb3VwbGUlMjBoYW5kc3xlbnwxfHx8fDE3NzE2ODUwNTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          caption: "Together Forever",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1767986012138-4893f40932d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwY2VyZW1vbnklMjB2ZW51ZSUyMGVsZWdhbnR8ZW58MXx8fHwxNzcxNjg1MDU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          caption: "Special Moments",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1768777270963-8289ea9d870d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwcmVjZXB0aW9uJTIwZGVjb3JhdGlvbiUyMGZsb3dlcnN8ZW58MXx8fHwxNzcxNjg1MDU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          caption: "Beautiful Setup",
+          tall: true,
+        },
+      ]);
+      setLoading(false);
+    }
+  }, [weddingSlug]);
+
+  const loadWeddingGallery = async (slug: string) => {
+    try {
+      setLoading(true);
+      // We need wedding ID first
+      const { getWeddingBySlug } = await import("@/lib/api/multi-tenant");
+      const wedding = await getWeddingBySlug(slug);
+      
+      if (wedding) {
+        const gallery = await getGalleryByWeddingId(wedding.id);
+        setPhotos(gallery.map(g => ({
+          url: g.imageUrl,
+          caption: g.caption || undefined,
+          tall: g.order % 3 === 0, // Make every 3rd photo tall
+        })));
+      }
+    } catch (error) {
+      console.error("Error loading gallery:", error);
+      toast.error("Gagal memuat galeri");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-6 pb-24 px-6">
@@ -36,8 +77,13 @@ export function Gallery() {
           <p className="text-gray-600">Momen indah dalam perjalanan cinta kami</p>
         </motion.div>
 
-        {/* Masonry Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500" />
+          </div>
+        ) : (
+          /* Masonry Grid */
+          <div className="grid grid-cols-2 gap-4">
           {photos.map((photo, index) => (
             <motion.div
               key={index}
@@ -61,6 +107,7 @@ export function Gallery() {
             </motion.div>
           ))}
         </div>
+        )}
 
         {/* Quote Section */}
         <motion.div

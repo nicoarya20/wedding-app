@@ -1,13 +1,12 @@
 import { useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, Users, MessageSquare, Calendar, LogOut, UserCog } from "lucide-react";
-import { isAuthenticated, removeAuthToken, getCurrentUser } from "@/lib/auth";
+import { LayoutDashboard, Users, MessageSquare, Calendar, LogOut, UserCog, Image } from "lucide-react";
+import { isAuthenticated, removeAuthToken } from "@/lib/auth";
 import { toast } from "sonner";
 
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = getCurrentUser();
 
   useEffect(() => {
     // Check authentication on mount
@@ -23,6 +22,7 @@ export function AdminLayout() {
     { icon: Users, label: "Tamu", path: "/admin/dashboard/guests" },
     { icon: MessageSquare, label: "Ucapan", path: "/admin/dashboard/wishes" },
     { icon: Calendar, label: "Acara", path: "/admin/dashboard/event" },
+    { icon: Image, label: "Galeri", path: "/admin/dashboard/gallery" },
   ];
 
   const handleLogout = () => {

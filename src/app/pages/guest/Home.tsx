@@ -3,7 +3,12 @@ import { motion } from "motion/react";
 import { Heart, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
+import { getWeddingData } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
+
+interface HomeProps {
+  weddingSlug?: string;
+}
 
 // Default fallback data
 const defaultEventData: PublicEventData = {
@@ -17,7 +22,7 @@ const defaultEventData: PublicEventData = {
   resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
 };
 
-export function Home() {
+export function Home({ weddingSlug }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 0,
     hours: 0,
@@ -28,8 +33,40 @@ export function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadEventData();
-  }, []);
+    if (weddingSlug) {
+      loadWeddingData(weddingSlug);
+    } else {
+      loadEventData();
+    }
+  }, [weddingSlug]);
+
+  const loadWeddingData = async (slug: string) => {
+    try {
+      setLoading(true);
+      const data = await getWeddingData(slug);
+      if (data) {
+        // Convert events to PublicEventData format
+        const akadEvent = data.events.find(e => e.type === "akad");
+        const resepsiEvent = data.events.find(e => e.type === "resepsi");
+        
+        setEventData({
+          coupleName: data.wedding.coupleName,
+          weddingDate: data.wedding.weddingDate,
+          akadTime: akadEvent ? `${akadEvent.time}` : "TBA",
+          akadLocation: akadEvent?.location || "TBA",
+          akadAddress: akadEvent?.address || "",
+          resepsiTime: resepsiEvent ? `${resepsiEvent.time}` : "TBA",
+          resepsiLocation: resepsiEvent?.location || "TBA",
+          resepsiAddress: resepsiEvent?.address || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading wedding data:", error);
+      toast.error("Gagal memuat data wedding");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadEventData = async () => {
     try {

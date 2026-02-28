@@ -66,6 +66,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
  * Submit RSVP (guest-facing)
  */
 export interface SubmitRSVP {
+  weddingId?: string;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -77,6 +78,7 @@ export interface SubmitRSVP {
 export async function submitRSVP(data: SubmitRSVP): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.from("Guest").insert({
+      weddingId: data.weddingId || null,
       name: data.name,
       email: data.email || null,
       phone: data.phone || null,
@@ -114,7 +116,7 @@ export interface Guest {
 
 export async function getGuests(searchQuery?: string, filter?: string): Promise<Guest[]> {
   try {
-    let query = supabase.from("Guest").select("*").order("createdAt", { ascending: false });
+    const query = supabase.from("Guest").select("*").order("createdAt", { ascending: false });
 
     const { data, error } = await query;
 
@@ -143,6 +145,7 @@ export async function getGuests(searchQuery?: string, filter?: string): Promise<
  * Submit wish (guest-facing)
  */
 export interface SubmitWish {
+  weddingId?: string;
   name: string;
   message: string;
 }
@@ -150,6 +153,7 @@ export interface SubmitWish {
 export async function submitWish(data: SubmitWish): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.from("Wish").insert({
+      weddingId: data.weddingId || null,
       name: data.name,
       message: data.message,
     });

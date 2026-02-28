@@ -3,7 +3,12 @@ import { motion } from "motion/react";
 import { Calendar, Clock, MapPin, Navigation, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
+import { getWeddingData } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
+
+interface EventDetailsProps {
+  weddingSlug?: string;
+}
 
 // Default fallback images
 const akadImage = "https://images.unsplash.com/photo-1767986012138-4893f40932d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwY2VyZW1vbnklMjB2ZW51ZSUyMGVsZWdhbnR8ZW58MXx8fHwxNzcxNjg1MDU1fDA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -21,13 +26,44 @@ const defaultEventData: PublicEventData = {
   resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
 };
 
-export function EventDetails() {
+export function EventDetails({ weddingSlug }: EventDetailsProps) {
   const [eventData, setEventData] = useState<PublicEventData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadEventData();
-  }, []);
+    if (weddingSlug) {
+      loadWeddingData(weddingSlug);
+    } else {
+      loadEventData();
+    }
+  }, [weddingSlug]);
+
+  const loadWeddingData = async (slug: string) => {
+    try {
+      setLoading(true);
+      const data = await getWeddingData(slug);
+      if (data) {
+        const akadEvent = data.events.find(e => e.type === "akad");
+        const resepsiEvent = data.events.find(e => e.type === "resepsi");
+        
+        setEventData({
+          coupleName: data.wedding.coupleName,
+          weddingDate: data.wedding.weddingDate,
+          akadTime: akadEvent ? `${akadEvent.time}` : "TBA",
+          akadLocation: akadEvent?.location || "TBA",
+          akadAddress: akadEvent?.address || "",
+          resepsiTime: resepsiEvent ? `${resepsiEvent.time}` : "TBA",
+          resepsiLocation: resepsiEvent?.location || "TBA",
+          resepsiAddress: resepsiEvent?.address || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading wedding data:", error);
+      toast.error("Gagal memuat data wedding");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadEventData = async () => {
     try {

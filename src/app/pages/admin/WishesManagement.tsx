@@ -7,6 +7,17 @@ import { toast } from "sonner";
 
 interface Wish extends ApiWish {}
 
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return "Baru saja";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit lalu`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam lalu`;
+  return `${Math.floor(diffInSeconds / 86400)} hari lalu`;
+}
+
 export function WishesManagement() {
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [searchQuery, setSearchQuery] = useState("");

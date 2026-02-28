@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -49,7 +49,7 @@ async function main() {
   console.log("✓ Created wedding:", wedding.coupleName);
 
   // Create events for this wedding
-  const akadEvent = await prisma.event.upsert({
+  const _akadEvent = await prisma.event.upsert({
     where: { id: wedding.id + "_akad" },
     update: {},
     create: {
@@ -64,7 +64,7 @@ async function main() {
   });
   console.log("✓ Created Akad event");
 
-  const resepsiEvent = await prisma.event.upsert({
+  const _resepsiEvent = await prisma.event.upsert({
     where: { id: wedding.id + "_resepsi" },
     update: {},
     create: {

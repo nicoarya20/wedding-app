@@ -2,9 +2,14 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Users, Phone, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { submitRSVP, type SubmitRSVP as RSVPData } from "@/lib/api/admin";
+import { submitRSVP as submitRSVPGlobal, type SubmitRSVP as RSVPData } from "@/lib/api/admin";
+import { submitRSVP as submitRSVPMultiTenant } from "@/lib/api/multi-tenant";
 
-export function RSVP() {
+interface RSVPProps {
+  weddingSlug?: string;
+}
+
+export function RSVP({ weddingSlug }: RSVPProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -34,6 +39,7 @@ export function RSVP() {
 
     try {
       const rsvpData: RSVPData = {
+        weddingId: weddingSlug || undefined,
         name: formData.name,
         email: formData.email || null,
         phone: formData.phone || null,
@@ -42,7 +48,9 @@ export function RSVP() {
         message: formData.message || null,
       };
 
-      const result = await submitRSVP(rsvpData);
+      // Use multi-tenant API if weddingSlug is provided
+      const submitFn = weddingSlug ? submitRSVPMultiTenant : submitRSVPGlobal;
+      const result = await submitFn(rsvpData);
 
       if (result.success) {
         setSubmitted(true);

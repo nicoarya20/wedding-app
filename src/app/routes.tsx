@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, useParams } from "react-router";
 import { GuestLayout } from "./components/layouts/GuestLayout";
 import { AdminLayout } from "./components/layouts/AdminLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -15,7 +15,16 @@ import { EventManagement } from "./pages/admin/EventManagement";
 import { UserManagement } from "./pages/admin/UserManagement";
 import { ThemeCustomization } from "./pages/admin/ThemeCustomization";
 import { MenuCustomization } from "./pages/admin/MenuCustomization";
+import { GalleryManagement } from "./pages/admin/GalleryManagement";
 import { NotFound } from "./pages/NotFound";
+
+// Wrapper component for wedding-specific routes
+function WeddingRoutes(Component: any) {
+  return function WeddingRouteWrapper() {
+    const { slug } = useParams<{ slug: string }>();
+    return <Component weddingSlug={slug} />;
+  };
+}
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +36,18 @@ export const router = createBrowserRouter([
       { path: "rsvp", Component: RSVP },
       { path: "gallery", Component: Gallery },
       { path: "wishes", Component: Wishes },
+    ],
+  },
+  // Multi-tenant wedding routes
+  {
+    path: "/w/:slug",
+    Component: GuestLayout,
+    children: [
+      { index: true, Component: WeddingRoutes(Home) },
+      { path: "event-details", Component: WeddingRoutes(EventDetails) },
+      { path: "rsvp", Component: WeddingRoutes(RSVP) },
+      { path: "gallery", Component: WeddingRoutes(Gallery) },
+      { path: "wishes", Component: WeddingRoutes(Wishes) },
     ],
   },
   {
@@ -48,6 +69,7 @@ export const router = createBrowserRouter([
           { path: "guests", Component: GuestList },
           { path: "wishes", Component: WishesManagement },
           { path: "event", Component: EventManagement },
+          { path: "gallery", Component: GalleryManagement },
         ],
       },
     ],

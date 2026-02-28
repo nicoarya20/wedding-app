@@ -159,6 +159,39 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
 }
 
 /**
+ * Get wedding with all related data (events, gallery, menu config)
+ */
+export interface WeddingData {
+  wedding: Wedding;
+  events: Event[];
+  gallery: GalleryPhoto[];
+  menuConfig: MenuConfig | null;
+}
+
+export async function getWeddingData(slug: string): Promise<WeddingData | null> {
+  try {
+    const wedding = await getWeddingBySlug(slug);
+    if (!wedding) return null;
+
+    const [events, gallery, menuConfig] = await Promise.all([
+      getEventsByWeddingId(wedding.id),
+      getGalleryByWeddingId(wedding.id),
+      getMenuConfigByWeddingId(wedding.id),
+    ]);
+
+    return {
+      wedding,
+      events,
+      gallery,
+      menuConfig,
+    };
+  } catch (error) {
+    console.error("Error fetching wedding data:", error);
+    return null;
+  }
+}
+
+/**
  * Get wedding by user ID
  */
 export async function getWeddingByUserId(userId: string): Promise<Wedding | null> {

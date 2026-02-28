@@ -2,11 +2,16 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Heart, MessageSquare, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getWishes, submitWish, type Wish as ApiWish, type SubmitWish } from "@/lib/api/admin";
+import { getWishes as getWishesGlobal, submitWish as submitWishGlobal, type Wish as ApiWish, type SubmitWish } from "@/lib/api/admin";
+import { getWishesByWeddingId, submitWish as submitWishMultiTenant } from "@/lib/api/multi-tenant";
+
+interface WishesProps {
+  weddingSlug?: string;
+}
 
 interface Wish extends ApiWish {}
 
-export function Wishes() {
+export function Wishes({ weddingSlug }: WishesProps) {
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -22,7 +27,9 @@ export function Wishes() {
   const loadWishes = async () => {
     try {
       setLoading(true);
-      const data = await getWishes();
+      // Use multi-tenant API if weddingSlug is provided
+      const fetchFn = weddingSlug ? getWishesByWeddingId : getWishesGlobal;
+      const data = await fetchFn(weddingSlug || undefined as any);
       setWishes(data);
     } catch (error) {
       console.error("Error loading wishes:", error);
@@ -44,11 +51,14 @@ export function Wishes() {
 
     try {
       const wishData: SubmitWish = {
+        weddingId: weddingSlug || undefined,
         name: formData.name,
         message: formData.message,
       };
 
-      const result = await submitWish(wishData);
+      // Use multi-tenant API if weddingSlug is provided
+      const submitFn = weddingSlug ? submitWishMultiTenant : submitWishGlobal;
+      const result = await submitFn(wishData);
 
       if (result.success) {
         await loadWishes();
