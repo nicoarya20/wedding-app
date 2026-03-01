@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Search, Heart, Trash2, Loader2, RefreshCw, Inbox, Download } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getWishes, deleteWish, type Wish as ApiWish } from "@/lib/api/admin";
+import { supabase } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface Wish extends ApiWish {}
@@ -86,6 +87,28 @@ export function WishesManagement() {
     }
 
     loadWishes();
+
+    // Setup real-time subscription for new wishes
+    const channel = supabase
+      .channel('wishes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'Wish'
+        },
+        () => {
+          // Reload wishes when new one is inserted
+          loadWishes(true);
+          toast.success("Ucapan baru diterima! 🎉");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [navigate, loadWishes]);
 
   // Debounced search - triggers on searchQuery change
