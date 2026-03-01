@@ -17,6 +17,11 @@ export default defineConfig({
     },
   },
 
+  // Fix for Vercel build: Prevent commonjs plugin from interfering with React JSX
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
