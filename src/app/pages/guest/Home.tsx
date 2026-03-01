@@ -52,15 +52,6 @@ export function Home({ weddingSlug }: HomeProps) {
   const colors = themeColors[theme] || themeColors.rose;
   const fontFamily = weddingConfig?.fontFamily || "serif";
 
-  useEffect(() => {
-    if (weddingSlug) {
-      loadWeddingData(weddingSlug);
-    } else {
-      // No slug provided, load default/first wedding
-      loadDefaultWedding();
-    }
-  }, [weddingSlug, loadWeddingData, loadDefaultWedding]);
-
   const loadDefaultWedding = async () => {
     try {
       setLoading(true);
@@ -70,9 +61,9 @@ export function Home({ weddingSlug }: HomeProps) {
       // ✅ ALWAYS check the active user from database first (source of truth)
       const { getActiveUserWeddingSlug } = await import("@/lib/api/multi-tenant");
       const activeUserSlug = await getActiveUserWeddingSlug();
-      
+
       console.log("Active user slug from DB:", activeUserSlug);
-      
+
       if (activeUserSlug) {
         // ✅ Update localStorage to match the active user
         localStorage.setItem("activeWeddingSlug", activeUserSlug);
@@ -85,19 +76,19 @@ export function Home({ weddingSlug }: HomeProps) {
       // ✅ No active user, check localStorage for previously visited wedding
       const storedSlug = localStorage.getItem("activeWeddingSlug");
       console.log("Stored slug in localStorage:", storedSlug);
-      
+
       if (storedSlug) {
         // Verify the slug still exists and is valid
         const { getWeddingBySlug } = await import("@/lib/api/multi-tenant");
         const wedding = await getWeddingBySlug(storedSlug);
         console.log("Wedding from stored slug:", wedding);
-        
+
         if (wedding) {
           // ✅ Redirect to the stored wedding URL
           navigate(`/w/${storedSlug}`, { replace: true });
           return;
         }
-        
+
         // If slug is invalid, clear it
         localStorage.removeItem("activeWeddingSlug");
       }
@@ -169,6 +160,15 @@ export function Home({ weddingSlug }: HomeProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingData(weddingSlug);
+    } else {
+      // No slug provided, load default/first wedding
+      loadDefaultWedding();
+    }
+  }, [weddingSlug]);
 
   // Parse wedding date for countdown
   const weddingDate = useMemo(() => {

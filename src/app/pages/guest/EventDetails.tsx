@@ -59,14 +59,6 @@ export function EventDetails({ weddingSlug }: EventDetailsProps) {
   const colors = themeColors[theme] || themeColors.rose;
   const fontFamily = weddingConfig?.fontFamily || "serif";
 
-  useEffect(() => {
-    if (weddingSlug) {
-      loadWeddingData(weddingSlug);
-    } else {
-      loadEventData();
-    }
-  }, [weddingSlug, loadWeddingData, loadEventData]);
-
   const loadWeddingData = async (slug: string) => {
     try {
       setLoading(true);
@@ -167,6 +159,14 @@ export function EventDetails({ weddingSlug }: EventDetailsProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingData(weddingSlug);
+    } else {
+      loadEventData();
+    }
+  }, [weddingSlug]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
