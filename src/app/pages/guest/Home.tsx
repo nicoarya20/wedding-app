@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Heart, Calendar, MapPin, Clock, Loader2, Share2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { getWeddingData } from "@/lib/api/multi-tenant";
+import { getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface HomeProps {
@@ -22,6 +22,18 @@ const defaultEventData: PublicEventData = {
   resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
 };
 
+// Theme color mappings
+const themeColors: Record<string, { primary: string; secondary: string; gradient: string }> = {
+  rose: { primary: "#e11d48", secondary: "#ec4899", gradient: "from-rose-500 to-pink-500" },
+  green: { primary: "#059669", secondary: "#10b981", gradient: "from-emerald-500 to-green-500" },
+  blue: { primary: "#0284c7", secondary: "#38bdf8", gradient: "from-blue-500 to-cyan-500" },
+  purple: { primary: "#7c3aed", secondary: "#a855f7", gradient: "from-purple-500 to-violet-500" },
+  gold: { primary: "#b45309", secondary: "#f59e0b", gradient: "from-amber-600 to-yellow-500" },
+  red: { primary: "#dc2626", secondary: "#ef4444", gradient: "from-red-600 to-red-400" },
+  teal: { primary: "#0d9488", secondary: "#14b8a6", gradient: "from-teal-600 to-cyan-500" },
+  indigo: { primary: "#4f46e5", secondary: "#6366f1", gradient: "from-indigo-600 to-blue-500" },
+};
+
 export function Home({ weddingSlug }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 0,
@@ -30,7 +42,13 @@ export function Home({ weddingSlug }: HomeProps) {
     seconds: 0,
   });
   const [eventData, setEventData] = useState<PublicEventData | null>(null);
+  const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get theme colors
+  const theme = weddingConfig?.theme || "rose";
+  const colors = themeColors[theme] || themeColors.rose;
+  const fontFamily = weddingConfig?.fontFamily || "serif";
 
   useEffect(() => {
     if (weddingSlug) {
@@ -45,10 +63,13 @@ export function Home({ weddingSlug }: HomeProps) {
       setLoading(true);
       const data = await getWeddingData(slug);
       if (data) {
+        // Set wedding configuration
+        setWeddingConfig(data.wedding);
+
         // Convert events to PublicEventData format
         const akadEvent = data.events.find(e => e.type === "akad");
         const resepsiEvent = data.events.find(e => e.type === "resepsi");
-        
+
         setEventData({
           coupleName: data.wedding.coupleName,
           weddingDate: data.wedding.weddingDate,
@@ -148,7 +169,14 @@ export function Home({ weddingSlug }: HomeProps) {
   };
 
   return (
-    <div className="min-h-screen">
+    <div 
+      className="min-h-screen"
+      style={{ 
+        fontFamily: fontFamily,
+        '--primary-color': colors.primary,
+        '--secondary-color': colors.secondary,
+      } as React.CSSProperties}
+    >
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -183,9 +211,9 @@ export function Home({ weddingSlug }: HomeProps) {
               )}
             </h1>
             <div className="flex items-center justify-center gap-4 mt-4 mb-8">
-              <div className="h-px w-12 bg-white/50" />
-              <Heart className="w-6 h-6 text-rose-400 fill-rose-400" />
-              <div className="h-px w-12 bg-white/50" />
+              <div className="h-px w-12" style={{ backgroundColor: colors.secondary }} />
+              <Heart className="w-6 h-6" style={{ color: colors.primary, fill: colors.primary }} />
+              <div className="h-px w-12" style={{ backgroundColor: colors.secondary }} />
             </div>
             <p className="text-lg opacity-90">
               {eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
@@ -221,19 +249,19 @@ export function Home({ weddingSlug }: HomeProps) {
           <p className="text-sm text-gray-600 mb-8">Sampai hari bahagia kami</p>
 
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.days}</div>
               <div className="text-xs opacity-90">Hari</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.hours}</div>
               <div className="text-xs opacity-90">Jam</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.minutes}</div>
               <div className="text-xs opacity-90">Menit</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.seconds}</div>
               <div className="text-xs opacity-90">Detik</div>
             </div>
@@ -242,7 +270,9 @@ export function Home({ weddingSlug }: HomeProps) {
       </div>
 
       {/* Quick Info Section */}
-      <div className="bg-gradient-to-b from-rose-50 to-white py-12 px-6">
+      <div className="bg-gradient-to-b from-gray-50 to-white py-12 px-6" style={{ 
+        backgroundImage: `linear-gradient(to bottom, ${colors.primary}10, white)` 
+      }}>
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
@@ -250,10 +280,10 @@ export function Home({ weddingSlug }: HomeProps) {
           viewport={{ once: true }}
           className="max-w-md mx-auto"
         >
-          <div className="bg-white rounded-3xl shadow-lg p-6 space-y-6">
+          <div className="bg-white rounded-3xl shadow-md p-6 space-y-6">
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <Calendar className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <Calendar className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Tanggal</h3>
@@ -271,8 +301,8 @@ export function Home({ weddingSlug }: HomeProps) {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <Clock className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <Clock className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Waktu</h3>
@@ -290,8 +320,8 @@ export function Home({ weddingSlug }: HomeProps) {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <MapPin className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <MapPin className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Lokasi</h3>
@@ -322,14 +352,14 @@ export function Home({ weddingSlug }: HomeProps) {
         >
           <h2 className="text-2xl mb-4 text-gray-800">Kisah Cinta Kami</h2>
           <p className="text-gray-600 leading-relaxed mb-8">
-            Perjalanan cinta kami dimulai 5 tahun yang lalu. Dari pertemanan menjadi 
-            cinta yang dalam, kami telah melewati banyak momen indah bersama. 
+            Perjalanan cinta kami dimulai 5 tahun yang lalu. Dari pertemanan menjadi
+            cinta yang dalam, kami telah melewati banyak momen indah bersama.
             Kini saatnya kami mengikat janji suci di hadapan Tuhan dan orang-orang terkasih.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse" />
-            <Heart className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <Heart className="w-3 h-3 text-rose-300 fill-rose-300 animate-pulse" style={{ animationDelay: '0.4s' }} />
+            <Heart className="w-5 h-5 animate-pulse" style={{ color: colors.primary, fill: colors.primary }} />
+            <Heart className="w-4 h-4 animate-pulse" style={{ color: colors.secondary, fill: colors.secondary, animationDelay: '0.2s' }} />
+            <Heart className="w-3 h-3 animate-pulse" style={{ color: colors.primary, fill: colors.primary, animationDelay: '0.4s' }} />
           </div>
         </motion.div>
       </div>
