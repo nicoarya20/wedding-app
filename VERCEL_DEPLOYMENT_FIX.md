@@ -117,6 +117,15 @@ npm run build
 2. Vercel will automatically detect the `vercel.json` configuration
 3. Build should now complete successfully
 
+### Important: Clear Vercel Cache
+
+If you still see errors, clear Vercel's build cache:
+
+1. Go to your project settings in Vercel
+2. Navigate to "Deployments"
+3. Click "Delete All" in the "Build Cache" section
+4. Redeploy your application
+
 ## Local Testing
 
 To test the production build locally:
@@ -138,6 +147,36 @@ npm run preview
 - **Keep Tailwind CSS v3** syntax (avoid v4 features like `@import 'tailwindcss'`)
 - **Use npm for builds** on Vercel (Bun may not be properly supported)
 - The `dist/` folder is generated and should not be committed
+
+## Troubleshooting
+
+### Error: Cannot find module 'vite/dist/node/chunks/dep-*.js'
+
+This error indicates corrupted cache or incomplete dependency installation on Vercel.
+
+**Solution:**
+
+1. **Clear Vercel Build Cache** (most important):
+   - Go to Vercel Dashboard → Your Project → Settings
+   - Find "Build Cache" section
+   - Click "Delete All"
+   - Redeploy
+
+2. **Ensure clean installation**:
+   - `.npmrc` file is present with `legacy-peer-deps=true`
+   - `vercel.json` uses `npm ci --legacy-peer-deps`
+   - Vite version is pinned exactly (no `^` or `~`)
+
+3. **Check Node version compatibility**:
+   - Vercel should use Node 20.x (recommended)
+   - Add `"nodeVersion": "20.x"` to `vercel.json` if needed
+
+### Error: Could not resolve react-jsx-runtime
+
+This is a Vite 6 compatibility issue with React 18.
+
+**Solution:**
+- Downgrade Vite to v5.4.11 (already done in this fix)
 
 ## Related Files
 
