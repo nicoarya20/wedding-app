@@ -28,6 +28,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  wedding?: Wedding | null; // Include wedding data if exists
 }
 
 export interface CreateUserInput {
@@ -286,18 +287,35 @@ export async function createUser(data: CreateUserInput): Promise<{
 }
 
 /**
- * Get all users
+ * Get all users with their wedding data
  */
 export async function getAllUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase
       .from("User")
-      .select("*")
+      .select(`
+        *,
+        Wedding (
+          id,
+          slug,
+          coupleName,
+          weddingDate,
+          theme,
+          primaryColor,
+          secondaryColor,
+          fontFamily
+        )
+      `)
       .order("createdAt", { ascending: false });
 
     if (error) throw error;
 
-    return data || [];
+    // Map data to include wedding info
+    return (data || []).map(user => ({
+      ...user,
+      weddingSlug: user.Wedding?.slug || null,
+      wedding: user.Wedding || null,
+    }));
   } catch (error) {
     console.error("Error fetching users:", error);
     return [];

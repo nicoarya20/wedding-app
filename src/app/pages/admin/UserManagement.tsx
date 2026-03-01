@@ -5,7 +5,9 @@ import { useNavigate } from "react-router";
 import { getAllUsers, createUser, updateUser, deleteUser, type User as ApiUser } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
-interface User extends ApiUser {}
+interface User extends ApiUser {
+  weddingSlug?: string | null;
+}
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -366,6 +368,17 @@ export function UserManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={`/w/${user.weddingSlug || '#'}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-green-600 hover:text-green-900 transition-colors"
+                              title="Lihat Wedding Page"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
                             <button
                               onClick={() => navigate(`/admin/dashboard/users/${user.id}/wedding/theme`)}
                               className="text-purple-600 hover:text-purple-900 transition-colors"
