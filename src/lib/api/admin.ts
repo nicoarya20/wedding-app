@@ -332,7 +332,7 @@ export async function getEventData(weddingSlug?: string): Promise<EventData | nu
 export async function updateEventData(eventData: EventData, weddingSlug?: string): Promise<boolean> {
   try {
     const slug = weddingSlug || "sarah-michael";
-    
+
     const { data: wedding, error: weddingError } = await supabase
       .from("Wedding")
       .select("id")
@@ -342,6 +342,7 @@ export async function updateEventData(eventData: EventData, weddingSlug?: string
     if (weddingError && weddingError.code !== "PGRST116") throw weddingError;
 
     if (wedding) {
+      // Update Wedding table with coupleName and weddingDate
       await supabase
         .from("Wedding")
         .update({
@@ -350,6 +351,7 @@ export async function updateEventData(eventData: EventData, weddingSlug?: string
         })
         .eq("id", wedding.id);
 
+      // Get events for this wedding
       const { data: events } = await supabase
         .from("Event")
         .select("id, type")
@@ -361,6 +363,7 @@ export async function updateEventData(eventData: EventData, weddingSlug?: string
             await supabase
               .from("Event")
               .update({
+                date: eventData.weddingDate, // Sync date with wedding date
                 time: eventData.akadTime,
                 location: eventData.akadLocation,
                 address: eventData.akadAddress,
@@ -370,6 +373,7 @@ export async function updateEventData(eventData: EventData, weddingSlug?: string
             await supabase
               .from("Event")
               .update({
+                date: eventData.weddingDate, // Sync date with wedding date
                 time: eventData.resepsiTime,
                 location: eventData.resepsiLocation,
                 address: eventData.resepsiAddress,
