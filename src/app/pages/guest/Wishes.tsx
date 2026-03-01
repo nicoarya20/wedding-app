@@ -3,13 +3,25 @@ import { motion } from "motion/react";
 import { Heart, MessageSquare, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getWishes as getWishesGlobal, submitWish as submitWishGlobal, type Wish as ApiWish, type SubmitWish } from "@/lib/api/admin";
-import { getWishesByWeddingId, submitWish as submitWishMultiTenant } from "@/lib/api/multi-tenant";
+import { getWishesByWeddingId, submitWish as submitWishMultiTenant, getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
 
 interface WishesProps {
   weddingSlug?: string;
 }
 
 interface Wish extends ApiWish {}
+
+// Theme color mappings (same as other pages)
+const themeColors: Record<string, { primary: string; secondary: string; gradient: string }> = {
+  rose: { primary: "#e11d48", secondary: "#ec4899", gradient: "from-rose-500 to-pink-500" },
+  green: { primary: "#059669", secondary: "#10b981", gradient: "from-emerald-500 to-green-500" },
+  blue: { primary: "#0284c7", secondary: "#38bdf8", gradient: "from-blue-500 to-cyan-500" },
+  purple: { primary: "#7c3aed", secondary: "#a855f7", gradient: "from-purple-500 to-violet-500" },
+  gold: { primary: "#b45309", secondary: "#f59e0b", gradient: "from-amber-600 to-yellow-500" },
+  red: { primary: "#dc2626", secondary: "#ef4444", gradient: "from-red-600 to-red-400" },
+  teal: { primary: "#0d9488", secondary: "#14b8a6", gradient: "from-teal-600 to-cyan-500" },
+  indigo: { primary: "#4f46e5", secondary: "#6366f1", gradient: "from-indigo-600 to-blue-500" },
+};
 
 export function Wishes({ weddingSlug }: WishesProps) {
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -19,6 +31,29 @@ export function Wishes({ weddingSlug }: WishesProps) {
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
+
+  // Get theme colors
+  const theme = weddingConfig?.theme || "rose";
+  const colors = themeColors[theme] || themeColors.rose;
+  const fontFamily = weddingConfig?.fontFamily || "serif";
+
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingConfig(weddingSlug);
+    }
+  }, [weddingSlug]);
+
+  const loadWeddingConfig = async (slug: string) => {
+    try {
+      const data = await getWeddingData(slug);
+      if (data) {
+        setWeddingConfig(data.wedding);
+      }
+    } catch (error) {
+      console.error("Error loading wedding config:", error);
+    }
+  };
 
   const loadWishes = useCallback(async () => {
     try {
@@ -87,7 +122,10 @@ export function Wishes({ weddingSlug }: WishesProps) {
   };
 
   return (
-    <div className="min-h-screen pt-6 pb-24 px-6">
+    <div
+      className="min-h-screen pt-6 pb-24 px-6"
+      style={{ fontFamily }}
+    >
       <div className="max-w-md mx-auto">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -121,7 +159,8 @@ export function Wishes({ weddingSlug }: WishesProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 wishes-focus-ring"
+                style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
                 placeholder="Masukkan nama Anda"
               />
             </div>
@@ -137,7 +176,8 @@ export function Wishes({ weddingSlug }: WishesProps) {
                   setFormData({ ...formData, message: e.target.value })
                 }
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 wishes-focus-ring resize-none"
+                style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
                 placeholder="Tuliskan ucapan dan doa terbaik..."
               />
             </div>
@@ -145,7 +185,16 @@ export function Wishes({ weddingSlug }: WishesProps) {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+              }}
+              onMouseEnter={(e) => {
+                if (!submitting) e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
             >
               {submitting ? (
                 <>
@@ -165,7 +214,7 @@ export function Wishes({ weddingSlug }: WishesProps) {
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.primary }} />
             <span className="ml-2 text-gray-600">Memuat ucapan...</span>
           </div>
         )}
@@ -179,13 +228,13 @@ export function Wishes({ weddingSlug }: WishesProps) {
             className="space-y-4"
           >
             <div className="flex items-center gap-2 text-gray-600 mb-4">
-              <MessageSquare className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5" style={{ color: colors.primary }} />
               <span className="text-sm">{wishes.length} Ucapan</span>
             </div>
 
             {wishes.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-md p-8 text-center">
-                <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <Heart className="w-12 h-12 mx-auto mb-3" style={{ color: colors.primary, opacity: 0.3 }} />
                 <p className="text-gray-500">Belum ada ucapan</p>
                 <p className="text-sm text-gray-400 mt-1">
                   Jadilah yang pertama mengirimkan ucapan
@@ -201,8 +250,13 @@ export function Wishes({ weddingSlug }: WishesProps) {
                   className="bg-white rounded-2xl shadow-md p-5"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="bg-gradient-to-br from-rose-100 to-pink-100 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                      <Heart className="w-5 h-5 text-rose-600 fill-rose-600" />
+                    <div
+                      className="rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${colors.primary}20, ${colors.secondary}20)`,
+                      }}
+                    >
+                      <Heart className="w-5 h-5" style={{ color: colors.primary, fill: colors.primary }} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">

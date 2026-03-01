@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Users, Phone, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { submitRSVP as submitRSVPGlobal, type SubmitRSVP as RSVPData } from "@/lib/api/admin";
-import { submitRSVP as submitRSVPMultiTenant } from "@/lib/api/multi-tenant";
+import { submitRSVP as submitRSVPMultiTenant, getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
 
 interface RSVPProps {
   weddingSlug?: string;
 }
+
+// Theme color mappings (same as other pages)
+const themeColors: Record<string, { primary: string; secondary: string; gradient: string }> = {
+  rose: { primary: "#e11d48", secondary: "#ec4899", gradient: "from-rose-500 to-pink-500" },
+  green: { primary: "#059669", secondary: "#10b981", gradient: "from-emerald-500 to-green-500" },
+  blue: { primary: "#0284c7", secondary: "#38bdf8", gradient: "from-blue-500 to-cyan-500" },
+  purple: { primary: "#7c3aed", secondary: "#a855f7", gradient: "from-purple-500 to-violet-500" },
+  gold: { primary: "#b45309", secondary: "#f59e0b", gradient: "from-amber-600 to-yellow-500" },
+  red: { primary: "#dc2626", secondary: "#ef4444", gradient: "from-red-600 to-red-400" },
+  teal: { primary: "#0d9488", secondary: "#14b8a6", gradient: "from-teal-600 to-cyan-500" },
+  indigo: { primary: "#4f46e5", secondary: "#6366f1", gradient: "from-indigo-600 to-blue-500" },
+};
 
 export function RSVP({ weddingSlug }: RSVPProps) {
   const [formData, setFormData] = useState({
@@ -21,6 +33,29 @@ export function RSVP({ weddingSlug }: RSVPProps) {
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
+
+  // Get theme colors
+  const theme = weddingConfig?.theme || "rose";
+  const colors = themeColors[theme] || themeColors.rose;
+  const fontFamily = weddingConfig?.fontFamily || "serif";
+
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingConfig(weddingSlug);
+    }
+  }, [weddingSlug]);
+
+  const loadWeddingConfig = async (slug: string) => {
+    try {
+      const data = await getWeddingData(slug);
+      if (data) {
+        setWeddingConfig(data.wedding);
+      }
+    } catch (error) {
+      console.error("Error loading wedding config:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +112,10 @@ export function RSVP({ weddingSlug }: RSVPProps) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div
+        className="min-h-screen flex items-center justify-center px-6"
+        style={{ fontFamily }}
+      >
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -85,17 +123,23 @@ export function RSVP({ weddingSlug }: RSVPProps) {
           className="max-w-md mx-auto text-center"
         >
           <div className="bg-white rounded-3xl shadow-lg p-8">
-            <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            <div
+              className="rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: `${colors.primary}20` }}
+            >
+              <CheckCircle2 className="w-10 h-10" style={{ color: colors.primary }} />
             </div>
             <h2 className="text-2xl mb-3 text-gray-800">Terima Kasih!</h2>
             <p className="text-gray-600 mb-6">
-              Konfirmasi kehadiran Anda telah kami terima. Kami sangat menantikan 
+              Konfirmasi kehadiran Anda telah kami terima. Kami sangat menantikan
               kehadiran Anda di hari bahagia kami.
             </p>
             <button
               onClick={() => setSubmitted(false)}
-              className="bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all"
+              className="text-white px-6 py-3 rounded-xl transition-all"
+              style={{
+                background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+              }}
             >
               Kirim RSVP Lagi
             </button>
@@ -106,7 +150,10 @@ export function RSVP({ weddingSlug }: RSVPProps) {
   }
 
   return (
-    <div className="min-h-screen pt-6 pb-24 px-6">
+    <div
+      className="min-h-screen pt-6 pb-24 px-6"
+      style={{ fontFamily }}
+    >
       <div className="max-w-md mx-auto">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -139,7 +186,8 @@ export function RSVP({ weddingSlug }: RSVPProps) {
               value={formData.name}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 rsvp-focus-ring"
+              style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
               placeholder="Masukkan nama lengkap"
             />
           </div>
@@ -150,14 +198,15 @@ export function RSVP({ weddingSlug }: RSVPProps) {
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: colors.primary }} />
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2"
+                style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
                 placeholder="email@example.com"
               />
             </div>
@@ -169,14 +218,15 @@ export function RSVP({ weddingSlug }: RSVPProps) {
               Nomor Telepon
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: colors.primary }} />
               <input
                 type="tel"
                 id="phone"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2"
+                style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
                 placeholder="08xxxxxxxxxx"
               />
             </div>
@@ -193,7 +243,8 @@ export function RSVP({ weddingSlug }: RSVPProps) {
               value={formData.attendance}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2"
+              style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
             >
               <option value="">Pilih konfirmasi kehadiran</option>
               <option value="hadir">Ya, saya akan hadir</option>
@@ -213,13 +264,14 @@ export function RSVP({ weddingSlug }: RSVPProps) {
                 Jumlah Tamu
               </label>
               <div className="relative">
-                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: colors.primary }} />
                 <select
                   id="guestCount"
                   name="guestCount"
                   value={formData.guestCount}
                   onChange={handleChange}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2"
+                  style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
                 >
                   <option value="1">1 orang</option>
                   <option value="2">2 orang</option>
@@ -242,7 +294,8 @@ export function RSVP({ weddingSlug }: RSVPProps) {
               value={formData.message}
               onChange={handleChange}
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 resize-none"
+              style={{ '--focus-ring-color': colors.primary } as React.CSSProperties}
               placeholder="Tuliskan ucapan dan doa untuk kami..."
             />
           </div>
@@ -251,7 +304,16 @@ export function RSVP({ weddingSlug }: RSVPProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white py-4 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full text-white py-4 rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+            }}
+            onMouseEnter={(e) => {
+              if (!submitting) e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
           >
             {submitting ? (
               <>
