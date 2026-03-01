@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Heart, Calendar, MapPin, Clock, Loader2, Share2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
+import { getWeddingData, type WeddingData, supabase } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface HomeProps {
@@ -54,9 +54,36 @@ export function Home({ weddingSlug }: HomeProps) {
     if (weddingSlug) {
       loadWeddingData(weddingSlug);
     } else {
-      loadEventData();
+      // No slug provided, load default/first wedding
+      loadDefaultWedding();
     }
   }, [weddingSlug]);
+
+  const loadDefaultWedding = async () => {
+    try {
+      setLoading(true);
+      // Get first active wedding from database
+      const { data: weddings, error } = await supabase
+        .from("Wedding")
+        .select("slug")
+        .eq("isActive", true)
+        .limit(1)
+        .single();
+
+      if (weddings?.slug) {
+        // Redirect to wedding page with slug
+        loadWeddingData(weddings.slug);
+      } else {
+        // No wedding found, use fallback data
+        loadEventData();
+      }
+    } catch (error) {
+      console.error("Error loading default wedding:", error);
+      loadEventData();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadWeddingData = async (slug: string) => {
     try {
