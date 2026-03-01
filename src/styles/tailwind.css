@@ -2,3 +2,11 @@
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+/* Custom focus ring color for forms */
+.rsvp-focus-ring:focus,
+.wishes-focus-ring:focus {
+  --tw-ring-color: var(--focus-ring-color);
+  --tw-ring-opacity: 1;
+  box-shadow: 0 0 0 2px var(--focus-ring-color);
+}

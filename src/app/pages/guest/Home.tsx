@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import { Heart, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
+import { getFirstActiveWedding, getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
+import { Calendar, Clock, Heart, Loader2, MapPin, Share2 } from "lucide-react";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+
+interface HomeProps {
+  weddingSlug?: string;
+}
 
 // Default fallback data
 const defaultEventData: PublicEventData = {
@@ -17,7 +23,20 @@ const defaultEventData: PublicEventData = {
   resepsiAddress: "Jl. Thamrin No. 456, Jakarta Pusat",
 };
 
-export function Home() {
+// Theme color mappings
+const themeColors: Record<string, { primary: string; secondary: string; gradient: string }> = {
+  rose: { primary: "#e11d48", secondary: "#ec4899", gradient: "from-rose-500 to-pink-500" },
+  green: { primary: "#059669", secondary: "#10b981", gradient: "from-emerald-500 to-green-500" },
+  blue: { primary: "#0284c7", secondary: "#38bdf8", gradient: "from-blue-500 to-cyan-500" },
+  purple: { primary: "#7c3aed", secondary: "#a855f7", gradient: "from-purple-500 to-violet-500" },
+  gold: { primary: "#b45309", secondary: "#f59e0b", gradient: "from-amber-600 to-yellow-500" },
+  red: { primary: "#dc2626", secondary: "#ef4444", gradient: "from-red-600 to-red-400" },
+  teal: { primary: "#0d9488", secondary: "#14b8a6", gradient: "from-teal-600 to-cyan-500" },
+  indigo: { primary: "#4f46e5", secondary: "#6366f1", gradient: "from-indigo-600 to-blue-500" },
+};
+
+export function Home({ weddingSlug }: HomeProps) {
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState({
     days: 0,
     hours: 0,
@@ -25,11 +44,108 @@ export function Home() {
     seconds: 0,
   });
   const [eventData, setEventData] = useState<PublicEventData | null>(null);
+  const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadEventData();
-  }, []);
+  // Get theme colors
+  const theme = weddingConfig?.theme || "rose";
+  const colors = themeColors[theme] || themeColors.rose;
+  const fontFamily = weddingConfig?.fontFamily || "serif";
+
+  const loadDefaultWedding = async () => {
+    try {
+      setLoading(true);
+
+      console.log("=== loadDefaultWedding started ===");
+
+      // ✅ ALWAYS check the active user from database first (source of truth)
+      const { getActiveUserWeddingSlug } = await import("@/lib/api/multi-tenant");
+      const activeUserSlug = await getActiveUserWeddingSlug();
+
+      console.log("Active user slug from DB:", activeUserSlug);
+
+      if (activeUserSlug) {
+        // ✅ Update localStorage to match the active user
+        localStorage.setItem("activeWeddingSlug", activeUserSlug);
+        console.log("Redirecting to active user wedding:", activeUserSlug);
+        // ✅ Redirect to the active user's wedding URL
+        navigate(`/w/${activeUserSlug}`, { replace: true });
+        return;
+      }
+
+      // ✅ No active user, check localStorage for previously visited wedding
+      const storedSlug = localStorage.getItem("activeWeddingSlug");
+      console.log("Stored slug in localStorage:", storedSlug);
+
+      if (storedSlug) {
+        // Verify the slug still exists and is valid
+        const { getWeddingBySlug } = await import("@/lib/api/multi-tenant");
+        const wedding = await getWeddingBySlug(storedSlug);
+        console.log("Wedding from stored slug:", wedding);
+
+        if (wedding) {
+          // ✅ Redirect to the stored wedding URL
+          navigate(`/w/${storedSlug}`, { replace: true });
+          return;
+        }
+
+        // If slug is invalid, clear it
+        localStorage.removeItem("activeWeddingSlug");
+      }
+
+      // ✅ No active user and no stored slug, get first active wedding
+      const wedding = await getFirstActiveWedding();
+      console.log("First active wedding:", wedding);
+
+      if (wedding?.slug) {
+        // ✅ Store in localStorage for future visits
+        localStorage.setItem("activeWeddingSlug", wedding.slug);
+        // ✅ REDIRECT ke wedding-specific URL
+        navigate(`/w/${wedding.slug}`, { replace: true });
+        return;
+      }
+
+      // No wedding found, use fallback data
+      console.log("No wedding found, using fallback data");
+      loadEventData();
+    } catch (error) {
+      console.error("Error loading default wedding:", error);
+      loadEventData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadWeddingData = async (slug: string) => {
+    try {
+      setLoading(true);
+      const data = await getWeddingData(slug);
+      if (data) {
+        // Set wedding configuration
+        setWeddingConfig(data.wedding);
+
+        // Convert events to PublicEventData format
+        const akadEvent = data.events.find(e => e.type === "akad");
+        const resepsiEvent = data.events.find(e => e.type === "resepsi");
+
+        setEventData({
+          coupleName: data.wedding.coupleName,
+          weddingDate: data.wedding.weddingDate,
+          akadTime: akadEvent ? `${akadEvent.time}` : "TBA",
+          akadLocation: akadEvent?.location || "TBA",
+          akadAddress: akadEvent?.address || "",
+          resepsiTime: resepsiEvent ? `${resepsiEvent.time}` : "TBA",
+          resepsiLocation: resepsiEvent?.location || "TBA",
+          resepsiAddress: resepsiEvent?.address || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading wedding data:", error);
+      toast.error("Gagal memuat data wedding");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadEventData = async () => {
     try {
@@ -45,10 +161,21 @@ export function Home() {
     }
   };
 
+  useEffect(() => {
+    if (weddingSlug) {
+      loadWeddingData(weddingSlug);
+    } else {
+      // No slug provided, load default/first wedding
+      loadDefaultWedding();
+    }
+  }, [weddingSlug]);
+
   // Parse wedding date for countdown
-  const weddingDate = eventData 
-    ? new Date(`${eventData.weddingDate}T14:00:00`)
-    : new Date("2026-06-15T14:00:00");
+  const weddingDate = useMemo(() => {
+    return eventData
+      ? new Date(`${eventData.weddingDate}T14:00:00`)
+      : new Date("2026-06-15T14:00:00");
+  }, [eventData]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -85,8 +212,38 @@ export function Home() {
     return eventData.coupleName;
   };
 
+  // WhatsApp share handler
+  const handleShare = () => {
+    if (!eventData || !eventData.weddingDate) return;
+
+    const weddingUrl = weddingSlug
+      ? `${window.location.origin}/w/${weddingSlug}`
+      : window.location.origin;
+
+    const message = `💍 Undangan Pernikahan ${eventData.coupleName}\n\n` +
+      `Kepada Yth. Bapak/Ibu/Saudara/i,\n` +
+      `Tanpa mengurangi rasa hormat, kami bermaksud mengundang Anda untuk menghadiri acara pernikahan kami.\n\n` +
+      `📅 Tanggal: ${formatDate(eventData.weddingDate)}\n` +
+      `🏛️ Akad: ${eventData.akadTime}\n` +
+      `🎉 Resepsi: ${eventData.resepsiTime}\n` +
+      `📍 Lokasi: ${eventData.resepsiLocation}\n\n` +
+      `Untuk informasi lebih lanjut, silakan kunjungi:\n${weddingUrl}\n\n` +
+      `Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir untuk memberikan doa restu.\n\n` +
+      `Terima kasih 🙏`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
-    <div className="min-h-screen">
+    <div
+      className="min-h-screen"
+      style={{
+        fontFamily: fontFamily,
+        '--primary-color': colors.primary,
+        '--secondary-color': colors.secondary,
+      } as React.CSSProperties}
+    >
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -121,13 +278,27 @@ export function Home() {
               )}
             </h1>
             <div className="flex items-center justify-center gap-4 mt-4 mb-8">
-              <div className="h-px w-12 bg-white/50" />
-              <Heart className="w-6 h-6 text-rose-400 fill-rose-400" />
-              <div className="h-px w-12 bg-white/50" />
+              <div className="h-px w-12" style={{ backgroundColor: colors.secondary }} />
+              <Heart className="w-6 h-6" style={{ color: colors.primary, fill: colors.primary }} />
+              <div className="h-px w-12" style={{ backgroundColor: colors.secondary }} />
             </div>
             <p className="text-lg opacity-90">
-              {eventData ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
+              {eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
             </p>
+
+            {/* Share Button */}
+            {!loading && (
+              <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.8, duration: 0.3 }}
+                onClick={handleShare}
+                className="mt-6 bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all px-6 py-3 rounded-full flex items-center gap-2 mx-auto"
+              >
+                <Share2 className="w-5 h-5" />
+                <span className="text-sm font-medium">Bagikan Undangan</span>
+              </motion.button>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -145,19 +316,19 @@ export function Home() {
           <p className="text-sm text-gray-600 mb-8">Sampai hari bahagia kami</p>
 
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.days}</div>
               <div className="text-xs opacity-90">Hari</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.hours}</div>
               <div className="text-xs opacity-90">Jam</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.minutes}</div>
               <div className="text-xs opacity-90">Menit</div>
             </div>
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 text-white">
+            <div className={`bg-gradient-to-br ${colors.gradient} rounded-2xl p-4 text-white`}>
               <div className="text-3xl mb-1">{countdown.seconds}</div>
               <div className="text-xs opacity-90">Detik</div>
             </div>
@@ -166,7 +337,9 @@ export function Home() {
       </div>
 
       {/* Quick Info Section */}
-      <div className="bg-gradient-to-b from-rose-50 to-white py-12 px-6">
+      <div className="bg-gradient-to-b from-gray-50 to-white py-12 px-6" style={{
+        backgroundImage: `linear-gradient(to bottom, ${colors.primary}10, white)`
+      }}>
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
@@ -174,10 +347,10 @@ export function Home() {
           viewport={{ once: true }}
           className="max-w-md mx-auto"
         >
-          <div className="bg-white rounded-3xl shadow-lg p-6 space-y-6">
+          <div className="bg-white rounded-3xl shadow-md p-6 space-y-6">
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <Calendar className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <Calendar className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Tanggal</h3>
@@ -188,15 +361,15 @@ export function Home() {
                       Loading...
                     </span>
                   ) : (
-                    eventData ? formatDate(eventData.weddingDate) : defaultEventData.weddingDate
+                    eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : defaultEventData.weddingDate
                   )}
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <Clock className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <Clock className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Waktu</h3>
@@ -214,8 +387,8 @@ export function Home() {
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="bg-rose-100 rounded-full p-3">
-                <MapPin className="w-6 h-6 text-rose-600" />
+              <div className="rounded-full p-3" style={{ backgroundColor: `${colors.primary}20` }}>
+                <MapPin className="w-6 h-6" style={{ color: colors.primary }} />
               </div>
               <div className="flex-1">
                 <h3 className="text-sm text-gray-500 mb-1">Lokasi</h3>
@@ -246,14 +419,14 @@ export function Home() {
         >
           <h2 className="text-2xl mb-4 text-gray-800">Kisah Cinta Kami</h2>
           <p className="text-gray-600 leading-relaxed mb-8">
-            Perjalanan cinta kami dimulai 5 tahun yang lalu. Dari pertemanan menjadi 
-            cinta yang dalam, kami telah melewati banyak momen indah bersama. 
+            Perjalanan cinta kami dimulai 5 tahun yang lalu. Dari pertemanan menjadi
+            cinta yang dalam, kami telah melewati banyak momen indah bersama.
             Kini saatnya kami mengikat janji suci di hadapan Tuhan dan orang-orang terkasih.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse" />
-            <Heart className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <Heart className="w-3 h-3 text-rose-300 fill-rose-300 animate-pulse" style={{ animationDelay: '0.4s' }} />
+            <Heart className="w-5 h-5 animate-pulse" style={{ color: colors.primary, fill: colors.primary }} />
+            <Heart className="w-4 h-4 animate-pulse" style={{ color: colors.secondary, fill: colors.secondary, animationDelay: '0.2s' }} />
+            <Heart className="w-3 h-3 animate-pulse" style={{ color: colors.primary, fill: colors.primary, animationDelay: '0.4s' }} />
           </div>
         </motion.div>
       </div>

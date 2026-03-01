@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, useParams } from "react-router";
 import { GuestLayout } from "./components/layouts/GuestLayout";
 import { AdminLayout } from "./components/layouts/AdminLayout";
 import { Home } from "./pages/guest/Home";
@@ -11,7 +11,19 @@ import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { GuestList } from "./pages/admin/GuestList";
 import { WishesManagement } from "./pages/admin/WishesManagement";
 import { EventManagement } from "./pages/admin/EventManagement";
+import { UserManagement } from "./pages/admin/UserManagement";
+import { ThemeCustomization } from "./pages/admin/ThemeCustomization";
+import { MenuCustomization } from "./pages/admin/MenuCustomization";
+import { GalleryManagement } from "./pages/admin/GalleryManagement";
 import { NotFound } from "./pages/NotFound";
+
+// Wrapper component for wedding-specific routes
+function WeddingRoutes(Component: any) {
+  return function WeddingRouteWrapper() {
+    const { slug } = useParams<{ slug: string }>();
+    return <Component weddingSlug={slug} />;
+  };
+}
 
 export const router = createBrowserRouter([
   {
@@ -25,18 +37,34 @@ export const router = createBrowserRouter([
       { path: "wishes", Component: Wishes },
     ],
   },
+  // Multi-tenant wedding routes
+  {
+    path: "/w/:slug",
+    Component: GuestLayout,
+    children: [
+      { index: true, Component: WeddingRoutes(Home) },
+      { path: "event-details", Component: WeddingRoutes(EventDetails) },
+      { path: "rsvp", Component: WeddingRoutes(RSVP) },
+      { path: "gallery", Component: WeddingRoutes(Gallery) },
+      { path: "wishes", Component: WeddingRoutes(Wishes) },
+    ],
+  },
   {
     path: "/admin",
     children: [
       { index: true, Component: AdminLogin },
       {
         path: "dashboard",
-        Component: AdminLayout,
+        Component: AdminLayout, // Remove ProtectedRoute wrapper
         children: [
           { index: true, Component: AdminDashboard },
+          { path: "users", Component: UserManagement },
+          { path: "users/:userId/wedding/theme", Component: ThemeCustomization },
+          { path: "users/:userId/wedding/menu", Component: MenuCustomization },
           { path: "guests", Component: GuestList },
           { path: "wishes", Component: WishesManagement },
           { path: "event", Component: EventManagement },
+          { path: "gallery", Component: GalleryManagement },
         ],
       },
     ],

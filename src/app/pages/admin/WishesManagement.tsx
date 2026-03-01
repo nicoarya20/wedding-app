@@ -1,11 +1,55 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
-import { Search, Heart, Trash2, Loader2, RefreshCw, Inbox } from "lucide-react";
+import { Search, Heart, Trash2, Loader2, RefreshCw, Inbox, Download } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getWishes, deleteWish, type Wish as ApiWish } from "@/lib/api/admin";
+import { supabase } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface Wish extends ApiWish {}
+
+function formatDate(dateString: string): string {
+  // Parse date string and ensure we handle timezone correctly
+  // Add 'Z' suffix if not present to ensure UTC parsing
+  const utcDate = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
+  const now = new Date();
+  
+  // Get time difference in seconds
+  const diffInSeconds = Math.floor((now.getTime() - utcDate.getTime()) / 1000);
+
+  if (diffInSeconds < 0) return "Baru saja"; // Future date (timezone edge case)
+  if (diffInSeconds < 60) return "Baru saja";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit lalu`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam lalu`;
+  return `${Math.floor(diffInSeconds / 86400)} hari lalu`;
+}
+
+const exportToCSV = (wishes: Wish[]) => {
+  // Create CSV content
+  const headers = ["Nama", "Pesan", "Tanggal"];
+  const rows = wishes.map(wish => [
+    `"${wish.name}"`,
+    `"${(wish.message || "").replace(/"/g, '""')}"`,
+    new Date(wish.createdAt).toLocaleString("id-ID"),
+  ]);
+
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.join(","))
+  ].join("\n");
+
+  // Create and download file
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `wishes-${new Date().toISOString().split("T")[0]}.csv`);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast.success("Ucapan berhasil diexport ke CSV!");
+};
 
 export function WishesManagement() {
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -16,16 +60,6 @@ export function WishesManagement() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if admin is logged in
-    if (!localStorage.getItem("adminLoggedIn")) {
-      navigate("/admin");
-      return;
-    }
-
-    loadWishes();
-  }, [navigate]);
-
   const loadWishes = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -33,11 +67,11 @@ export function WishesManagement() {
       } else {
         setLoading(true);
       }
-      
+
       const data = await getWishes(searchQuery);
       setWishes(data);
       setLastUpdated(new Date());
-      
+
       if (isRefresh) {
         toast.success("Data berhasil di-refresh");
       }
@@ -48,7 +82,39 @@ export function WishesManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast, searchQuery]);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Check if admin is logged in
+    if (!localStorage.getItem("adminAuthToken")) {
+      navigate("/admin");
+      return;
+    }
+
+    loadWishes();
+
+    // Setup real-time subscription for new wishes
+    const channel = supabase
+      .channel('wishes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'Wish'
+        },
+        () => {
+          // Reload wishes when new one is inserted
+          loadWishes(true);
+          toast.success("Ucapan baru diterima! 🎉");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [navigate, loadWishes]);
 
   // Debounced search - triggers on searchQuery change
   useEffect(() => {
@@ -89,14 +155,24 @@ export function WishesManagement() {
         >
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-2xl text-gray-800">Ucapan & Doa</h1>
-            <button
-              onClick={() => loadWishes(true)}
-              disabled={refreshing}
-              className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportToCSV(wishes)}
+                disabled={wishes.length === 0}
+                className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export ke CSV"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => loadWishes(true)}
+                disabled={refreshing}
+                className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-gray-600">Kelola ucapan dari tamu undangan</p>
