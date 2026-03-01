@@ -1,15 +1,18 @@
+/**
+ * Admin API using Supabase Client
+ * Works in browser environment
+ */
+
 import { createClient } from "@supabase/supabase-js";
 import { comparePassword, generateToken } from "../auth";
 
-// Supabase configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-/**
- * Dashboard statistics
- */
+// ==================== TYPE DEFINITIONS ====================
+
 export interface DashboardStats {
   totalGuests: number;
   attending: number;
@@ -18,26 +21,64 @@ export interface DashboardStats {
   totalWishes: number;
 }
 
-/**
- * Fetch dashboard statistics from Supabase
- */
+export interface Guest {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  attendance: string;
+  guestCount: string | null;
+  message: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Wish {
+  id: string;
+  name: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface PublicEventData {
+  coupleName?: string;
+  weddingDate?: string;
+  akadTime?: string;
+  akadLocation?: string;
+  akadAddress?: string;
+  resepsiTime?: string;
+  resepsiLocation?: string;
+  resepsiAddress?: string;
+}
+
+export interface EventData {
+  id?: string;
+  coupleName?: string;
+  weddingDate?: string;
+  akadTime?: string;
+  akadLocation?: string;
+  akadAddress?: string;
+  resepsiTime?: string;
+  resepsiLocation?: string;
+  resepsiAddress?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ==================== DASHBOARD APIS ====================
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
-    // Fetch guests count by attendance status
     const { data: guests, error: guestsError } = await supabase
       .from("Guest")
       .select("attendance");
 
     if (guestsError) throw guestsError;
 
-    // Fetch wishes count
-    const { count: wishesCount, error: wishesError } = await supabase
+    const { count: wishesCount } = await supabase
       .from("Wish")
       .select("*", { count: "exact", head: true });
 
-    if (wishesError) throw wishesError;
-
-    // Calculate statistics
     const attending = guests?.filter((g) => g.attendance === "hadir").length || 0;
     const notAttending = guests?.filter((g) => g.attendance === "tidak-hadir").length || 0;
     const uncertain = guests?.filter((g) => g.attendance === "belum-pasti").length || 0;
@@ -51,7 +92,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
-    // Return default values on error
     return {
       totalGuests: 0,
       attending: 0,
@@ -62,10 +102,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 }
 
-/**
- * Submit RSVP (guest-facing)
- */
-export interface SubmitRSVP {
+// ==================== GUEST APIS ====================
+
+export async function submitRSVP(data: {
   weddingId?: string;
   name: string;
   email?: string | null;
@@ -73,9 +112,7 @@ export interface SubmitRSVP {
   attendance: string;
   guestCount?: string | null;
   message?: string | null;
-}
-
-export async function submitRSVP(data: SubmitRSVP): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.from("Guest").insert({
       weddingId: data.weddingId || null,
@@ -92,44 +129,28 @@ export async function submitRSVP(data: SubmitRSVP): Promise<{ success: boolean; 
     return { success: true };
   } catch (error) {
     console.error("Error submitting RSVP:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error"
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
-/**
- * Fetch all guests with optional filtering
- */
-export interface Guest {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  attendance: string;
-  guestCount: string | null;
-  message: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export async function getGuests(searchQuery?: string, filter?: string): Promise<Guest[]> {
   try {
-    const query = supabase.from("Guest").select("*").order("createdAt", { ascending: false });
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("Guest")
+      .select("*")
+      .order("createdAt", { ascending: false });
 
     if (error) throw error;
 
     let guests = data || [];
 
-    // Apply search filter
     if (searchQuery) {
       guests = guests.filter((g) => g.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Apply attendance filter
     if (filter && filter !== "all") {
       guests = guests.filter((g) => g.attendance === filter);
     }
@@ -141,16 +162,13 @@ export async function getGuests(searchQuery?: string, filter?: string): Promise<
   }
 }
 
-/**
- * Submit wish (guest-facing)
- */
-export interface SubmitWish {
+// ==================== WISH APIS ====================
+
+export async function submitWish(data: {
   weddingId?: string;
   name: string;
   message: string;
-}
-
-export async function submitWish(data: SubmitWish): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.from("Wish").insert({
       weddingId: data.weddingId || null,
@@ -163,21 +181,11 @@ export async function submitWish(data: SubmitWish): Promise<{ success: boolean; 
     return { success: true };
   } catch (error) {
     console.error("Error submitting wish:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error"
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
-}
-
-/**
- * Fetch all wishes
- */
-export interface Wish {
-  id: string;
-  name: string;
-  message: string;
-  createdAt: string;
 }
 
 export async function getWishes(searchQuery?: string): Promise<Wish[]> {
@@ -191,7 +199,6 @@ export async function getWishes(searchQuery?: string): Promise<Wish[]> {
 
     let wishes = data || [];
 
-    // Apply search filter
     if (searchQuery) {
       wishes = wishes.filter(
         (w) =>
@@ -207,9 +214,6 @@ export async function getWishes(searchQuery?: string): Promise<Wish[]> {
   }
 }
 
-/**
- * Delete a wish
- */
 export async function deleteWish(id: string): Promise<boolean> {
   try {
     const { error } = await supabase.from("Wish").delete().eq("id", id);
@@ -223,25 +227,11 @@ export async function deleteWish(id: string): Promise<boolean> {
   }
 }
 
-/**
- * Fetch event data (public access for guest pages)
- * NOTE: Deprecated. Use multi-tenant API (getWeddingData) instead.
- */
-export interface PublicEventData {
-  coupleName?: string;
-  weddingDate?: string;
-  akadTime?: string;
-  akadLocation?: string;
-  akadAddress?: string;
-  resepsiTime?: string;
-  resepsiLocation?: string;
-  resepsiAddress?: string;
-}
+// ==================== EVENT APIS ====================
 
 export async function getPublicEventData(): Promise<PublicEventData | null> {
   try {
-    // Try new multi-tenant schema first
-    const { data: weddingData, error: weddingError } = await supabase
+    const { data, error } = await supabase
       .from("Wedding")
       .select(`
         coupleName,
@@ -256,18 +246,16 @@ export async function getPublicEventData(): Promise<PublicEventData | null> {
       .eq("slug", "sarah-michael")
       .single();
 
-    if (weddingError && weddingError.code !== "PGRST116") {
-      console.error("Error fetching wedding data:", weddingError);
-    }
+    if (error && error.code !== "PGRST116") throw error;
 
-    if (weddingData && weddingData.Event) {
-      const events = weddingData.Event as any[];
-      const akadEvent = events.find(e => e.type === "akad");
-      const resepsiEvent = events.find(e => e.type === "resepsi");
+    if (data && data.Event) {
+      const events = data.Event as any[];
+      const akadEvent = events.find((e) => e.type === "akad");
+      const resepsiEvent = events.find((e) => e.type === "resepsi");
 
       return {
-        coupleName: weddingData.coupleName,
-        weddingDate: weddingData.weddingDate,
+        coupleName: data.coupleName,
+        weddingDate: data.weddingDate,
         akadTime: akadEvent?.time || "",
         akadLocation: akadEvent?.location || "",
         akadAddress: akadEvent?.address || "",
@@ -277,52 +265,22 @@ export async function getPublicEventData(): Promise<PublicEventData | null> {
       };
     }
 
-    // Fallback to old schema (will return null if table doesn't exist)
-    const { data, error } = await supabase
-      .from("Event")
-      .select("coupleName, weddingDate, akadTime, akadLocation, akadAddress, resepsiTime, resepsiLocation, resepsiAddress")
-      .eq("id", "default")
-      .single();
-
-    if (error && error.code !== "PGRST116") throw error;
-
-    return data;
+    return null;
   } catch (error) {
     console.error("Error fetching public event data:", error);
     return null;
   }
 }
 
-/**
- * Fetch event data (admin access)
- * NOTE: This is deprecated. Use multi-tenant API instead.
- * Kept for backward compatibility with old schema.
- */
-export interface EventData {
-  id?: string;
-  coupleName?: string;     // Optional - comes from Wedding relation now
-  weddingDate?: string;    // Optional - comes from Wedding relation now
-  akadTime?: string;
-  akadLocation?: string;
-  akadAddress?: string;
-  resepsiTime?: string;
-  resepsiLocation?: string;
-  resepsiAddress?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export async function getEventData(): Promise<EventData | null> {
   try {
-    // Try to fetch from new multi-tenant schema first
-    const { data: weddingData, error: weddingError } = await supabase
+    const { data, error } = await supabase
       .from("Wedding")
       .select(`
         coupleName,
         weddingDate,
         Event (
-          akad: type,
-          date,
+          type,
           time,
           location,
           address
@@ -331,18 +289,16 @@ export async function getEventData(): Promise<EventData | null> {
       .eq("slug", "sarah-michael")
       .single();
 
-    if (weddingError && weddingError.code !== "PGRST116") {
-      console.error("Error fetching wedding data:", weddingError);
-    }
+    if (error && error.code !== "PGRST116") throw error;
 
-    if (weddingData && weddingData.Event) {
-      const events = weddingData.Event as any[];
-      const akadEvent = events.find(e => e.type === "akad");
-      const resepsiEvent = events.find(e => e.type === "resepsi");
+    if (data && data.Event) {
+      const events = data.Event as any[];
+      const akadEvent = events.find((e) => e.type === "akad");
+      const resepsiEvent = events.find((e) => e.type === "resepsi");
 
       return {
-        coupleName: weddingData.coupleName,
-        weddingDate: weddingData.weddingDate,
+        coupleName: data.coupleName,
+        weddingDate: data.weddingDate,
         akadTime: akadEvent?.time || "",
         akadLocation: akadEvent?.location || "",
         akadAddress: akadEvent?.address || "",
@@ -352,75 +308,77 @@ export async function getEventData(): Promise<EventData | null> {
       };
     }
 
-    // Fallback: try old schema (for backward compatibility)
-    const { data, error } = await supabase
-      .from("Event")
-      .select("*")
-      .eq("id", "default")
-      .single();
-
-    if (error && error.code !== "PGRST116") throw error;
-
-    return data;
+    return null;
   } catch (error) {
     console.error("Error fetching event data:", error);
     return null;
   }
 }
 
-/**
- * Update event data (upsert - update or insert)
- */
 export async function updateEventData(eventData: EventData): Promise<boolean> {
   try {
-    // Check if event exists
-    const existing = await getEventData();
+    const { data: wedding, error: weddingError } = await supabase
+      .from("Wedding")
+      .select("id")
+      .eq("slug", "sarah-michael")
+      .single();
 
-    if (existing) {
-      // Update existing
-      const { error } = await supabase
-        .from("Event")
+    if (weddingError && weddingError.code !== "PGRST116") throw weddingError;
+
+    if (wedding) {
+      await supabase
+        .from("Wedding")
         .update({
           coupleName: eventData.coupleName,
           weddingDate: eventData.weddingDate,
-          akadTime: eventData.akadTime,
-          akadLocation: eventData.akadLocation,
-          akadAddress: eventData.akadAddress,
-          resepsiTime: eventData.resepsiTime,
-          resepsiLocation: eventData.resepsiLocation,
-          resepsiAddress: eventData.resepsiAddress,
         })
-        .eq("id", "default");
+        .eq("id", wedding.id);
 
-      if (error) throw error;
-    } else {
-      // Insert new
-      const { error } = await supabase.from("Event").insert({
-        id: "default",
-        coupleName: eventData.coupleName,
-        weddingDate: eventData.weddingDate,
-        akadTime: eventData.akadTime,
-        akadLocation: eventData.akadLocation,
-        akadAddress: eventData.akadAddress,
-        resepsiTime: eventData.resepsiTime,
-        resepsiLocation: eventData.resepsiLocation,
-        resepsiAddress: eventData.resepsiAddress,
-      });
+      const { data: events } = await supabase
+        .from("Event")
+        .select("id, type")
+        .eq("weddingId", wedding.id);
 
-      if (error) throw error;
+      if (events && events.length > 0) {
+        for (const event of events) {
+          if (event.type === "akad") {
+            await supabase
+              .from("Event")
+              .update({
+                time: eventData.akadTime,
+                location: eventData.akadLocation,
+                address: eventData.akadAddress,
+              })
+              .eq("id", event.id);
+          } else if (event.type === "resepsi") {
+            await supabase
+              .from("Event")
+              .update({
+                time: eventData.resepsiTime,
+                location: eventData.resepsiLocation,
+                address: eventData.resepsiAddress,
+              })
+              .eq("id", event.id);
+          }
+        }
+      }
+
+      return true;
     }
 
-    return true;
+    return false;
   } catch (error) {
     console.error("Error updating event data:", error);
     return false;
   }
 }
 
-/**
- * Admin authentication with JWT token
- */
-export async function loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
+// ==================== ADMIN AUTH APIS ====================
+
+export async function loginAdmin(
+  username: string,
+  password: string
+): Promise<{ success: boolean; token?: string; error?: string }> {
   try {
     const { data: admin, error } = await supabase
       .from("Admin")
@@ -432,14 +390,12 @@ export async function loginAdmin(username: string, password: string): Promise<{ 
       return { success: false, error: "Username tidak ditemukan" };
     }
 
-    // Compare password with hash
     const isValidPassword = await comparePassword(password, admin.password);
-    
+
     if (!isValidPassword) {
       return { success: false, error: "Password salah" };
     }
 
-    // Generate JWT token
     const token = generateToken({
       userId: admin.id,
       username: admin.username,
@@ -449,9 +405,9 @@ export async function loginAdmin(username: string, password: string): Promise<{ 
     return { success: true, token };
   } catch (error) {
     console.error("Error logging in admin:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

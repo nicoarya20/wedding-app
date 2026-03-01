@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Plus, Edit, Trash2, Loader2, Search, Palette, Calendar } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Loader2, Search, Palette, Calendar, ToggleLeft, ToggleRight, X, Menu } from "lucide-react";
 import { useNavigate } from "react-router";
-import { getAllUsers, createUser, type User as ApiUser } from "@/lib/api/multi-tenant";
+import { getAllUsers, createUser, updateUser, deleteUser, type User as ApiUser } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface User extends ApiUser {}
@@ -12,7 +12,10 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWeddingWizard, setShowWeddingWizard] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
@@ -20,6 +23,12 @@ export function UserManagement() {
     name: "",
     email: "",
     password: "",
+  });
+
+  const [editUser, setEditUser] = useState({
+    name: "",
+    email: "",
+    isActive: true,
   });
 
   const [newWedding, setNewWedding] = useState({
@@ -87,11 +96,11 @@ export function UserManagement() {
 
     try {
       const { createWedding } = await import("@/lib/api/multi-tenant");
-      
+
       // Generate couple name from user name
       const user = users.find(u => u.id === newUserId);
       const coupleName = user?.name || "Couple";
-      
+
       const result = await createWedding({
         userId: newUserId,
         slug: newWedding.slug.toLowerCase().replace(/\s+/g, '-'),
@@ -112,6 +121,86 @@ export function UserManagement() {
     } catch (error) {
       console.error("Error creating wedding:", error);
       toast.error("Gagal membuat wedding");
+    }
+  };
+
+  const handleToggleActive = async (userId: string, currentStatus: boolean) => {
+    try {
+      const result = await updateUser(userId, { isActive: !currentStatus });
+
+      if (result.success) {
+        toast.success(`User berhasil ${!currentStatus ? "diaktifkan" : "dinonaktifkan"}`);
+        await loadUsers();
+      } else {
+        toast.error(result.error || "Gagal mengubah status user");
+      }
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      toast.error("Gagal mengubah status user");
+    }
+  };
+
+  const handleEditClick = (user: User) => {
+    setSelectedUser(user);
+    setEditUser({
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedUser || !editUser.name || !editUser.email) {
+      toast.error("Mohon lengkapi semua field");
+      return;
+    }
+
+    try {
+      const result = await updateUser(selectedUser.id, {
+        name: editUser.name,
+        email: editUser.email,
+        isActive: editUser.isActive,
+      });
+
+      if (result.success) {
+        toast.success("User berhasil diupdate!");
+        setShowEditModal(false);
+        setSelectedUser(null);
+        await loadUsers();
+      } else {
+        toast.error(result.error || "Gagal mengupdate user");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Gagal mengupdate user");
+    }
+  };
+
+  const handleDeleteClick = (user: User) => {
+    setSelectedUser(user);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const result = await deleteUser(selectedUser.id);
+
+      if (result.success) {
+        toast.success("User berhasil dihapus!");
+        setShowDeleteConfirm(false);
+        setSelectedUser(null);
+        await loadUsers();
+      } else {
+        toast.error(result.error || "Gagal menghapus user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Gagal menghapus user");
     }
   };
 
@@ -149,6 +238,32 @@ export function UserManagement() {
               <Plus className="w-5 h-5" />
               Tambah User
             </button>
+          </div>
+          
+          {/* Workflow Info */}
+          <div className="mt-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-blue-900 mb-2">📋 Workflow Manajemen Wedding</h3>
+            <div className="flex items-center gap-4 text-xs text-blue-800 flex-wrap">
+              <div className="flex items-center gap-1">
+                <span className="font-semibold">1.</span>
+                <span>Tambah User</span>
+              </div>
+              <div className="text-blue-400">→</div>
+              <div className="flex items-center gap-1">
+                <Palette className="w-3 h-3" />
+                <span>Customize Tema</span>
+              </div>
+              <div className="text-blue-400">→</div>
+              <div className="flex items-center gap-1">
+                <Menu className="w-3 h-3" />
+                <span>Customize Menu</span>
+              </div>
+              <div className="text-blue-400">→</div>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                <span>Setup Events</span>
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -252,19 +367,43 @@ export function UserManagement() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => navigate(`/admin/dashboard/users/${user.id}/wedding`)}
-                              className="text-rose-600 hover:text-rose-900 transition-colors"
+                              onClick={() => navigate(`/admin/dashboard/users/${user.id}/wedding/theme`)}
+                              className="text-purple-600 hover:text-purple-900 transition-colors"
                               title="Kelola tema wedding"
                             >
                               <Palette className="w-5 h-5" />
                             </button>
                             <button
+                              onClick={() => navigate(`/admin/dashboard/users/${user.id}/wedding/menu`)}
+                              className="text-orange-600 hover:text-orange-900 transition-colors"
+                              title="Kelola menu wedding"
+                            >
+                              <Menu className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(user.id, user.isActive)}
+                              className={`${
+                                user.isActive
+                                  ? "text-green-600 hover:text-green-900"
+                                  : "text-gray-400 hover:text-gray-600"
+                              } transition-colors`}
+                              title={user.isActive ? "Nonaktifkan user" : "Aktifkan user"}
+                            >
+                              {user.isActive ? (
+                                <ToggleRight className="w-6 h-6" />
+                              ) : (
+                                <ToggleLeft className="w-6 h-6" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(user)}
                               className="text-blue-600 hover:text-blue-900 transition-colors"
                               title="Edit user"
                             >
                               <Edit className="w-5 h-5" />
                             </button>
                             <button
+                              onClick={() => handleDeleteClick(user)}
                               className="text-red-600 hover:text-red-900 transition-colors"
                               title="Hapus user"
                             >
@@ -385,7 +524,7 @@ export function UserManagement() {
                 <p className="text-sm text-blue-800">
                   💡 <strong>Tip:</strong> Slug akan menjadi URL unik untuk wedding page.
                   <br />
-                  Contoh: <code className="bg-blue-100 px-2 py-0.5 rounded">sarah-michael</code> → 
+                  Contoh: <code className="bg-blue-100 px-2 py-0.5 rounded">sarah-michael</code> →
                   <code className="bg-blue-100 px-2 py-0.5 rounded ml-1">/w/sarah-michael</code>
                 </p>
               </div>
@@ -442,6 +581,159 @@ export function UserManagement() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Edit User Modal */}
+        {showEditModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-center">
+                  <h2 className="text-2xl text-gray-800 mb-1">Edit User</h2>
+                  <p className="text-sm text-gray-600">Update informasi user</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div>
+                  <label htmlFor="edit-name" className="block text-sm text-gray-700 mb-2">
+                    Nama Lengkap <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-name"
+                    value={editUser.name}
+                    onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    placeholder="Contoh: Sarah & Michael"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="edit-email" className="block text-sm text-gray-700 mb-2">
+                    Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    id="edit-email"
+                    value={editUser.email}
+                    onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    placeholder="email@example.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="edit-status" className="block text-sm text-gray-700 mb-2">
+                    Status Akun
+                  </label>
+                  <div className="flex items-center gap-3 p-3 border border-gray-300 rounded-xl">
+                    {editUser.isActive ? (
+                      <ToggleRight className="w-8 h-8 text-green-600" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-gray-400" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {editUser.isActive ? "Aktif" : "Nonaktif"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {editUser.isActive 
+                          ? "User dapat login dan mengelola wedding" 
+                          : "User tidak dapat login"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditUser({ ...editUser, isActive: !editUser.isActive })}
+                      className="text-rose-600 hover:text-rose-700 text-sm font-medium"
+                    >
+                      {editUser.isActive ? "Nonaktifkan" : "Aktifkan"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setSelectedUser(null);
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all"
+                  >
+                    Update User
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full"
+            >
+              <div className="text-center mb-6">
+                <div className="bg-gradient-to-br from-red-100 to-red-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl text-gray-800 mb-2">Hapus User?</h2>
+                <p className="text-sm text-gray-600">
+                  Apakah Anda yakin ingin menghapus user <strong className="text-gray-900">{selectedUser.name}</strong>?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-4">
+                  <p className="text-sm text-red-800">
+                    ⚠️ <strong>Peringatan:</strong> Tindakan ini akan menghapus semua data wedding, events, gallery, dan RSVP yang terkait.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all"
+                >
+                  Hapus User
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

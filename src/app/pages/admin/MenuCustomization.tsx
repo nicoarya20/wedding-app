@@ -36,18 +36,6 @@ export function MenuCustomization() {
   const [saving, setSaving] = useState(false);
   const [coupleName, setCoupleName] = useState("");
 
-  useEffect(() => {
-    // Check if admin is logged in
-    if (!localStorage.getItem("adminAuthToken")) {
-      navigate("/admin");
-      return;
-    }
-
-    if (userId) {
-      loadData(userId);
-    }
-  }, [userId, navigate, loadData]);
-
   const loadData = useCallback(async (uid: string) => {
     try {
       setLoading(true);
@@ -79,6 +67,18 @@ export function MenuCustomization() {
       setLoading(false);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    // Check if admin is logged in
+    if (!localStorage.getItem("adminAuthToken")) {
+      navigate("/admin");
+      return;
+    }
+
+    if (userId) {
+      loadData(userId);
+    }
+  }, [userId, navigate, loadData]);
 
   const toggleVisibility = (key: string) => {
     setMenuItems(items =>

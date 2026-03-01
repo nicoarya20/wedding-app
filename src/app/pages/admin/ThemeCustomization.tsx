@@ -86,18 +86,6 @@ export function ThemeCustomization() {
   const [customSecondary, setCustomSecondary] = useState("#ec4899");
   const [selectedFont, setSelectedFont] = useState("serif");
 
-  useEffect(() => {
-    // Check if admin is logged in
-    if (!localStorage.getItem("adminAuthToken")) {
-      navigate("/admin");
-      return;
-    }
-
-    if (userId) {
-      loadWedding(userId);
-    }
-  }, [userId, navigate, loadWedding]);
-
   const loadWedding = useCallback(async (uid: string) => {
     try {
       setLoading(true);
@@ -121,6 +109,18 @@ export function ThemeCustomization() {
       setLoading(false);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    // Check if admin is logged in
+    if (!localStorage.getItem("adminAuthToken")) {
+      navigate("/admin");
+      return;
+    }
+
+    if (userId) {
+      loadWedding(userId);
+    }
+  }, [userId, navigate, loadWedding]);
 
   const handleThemeSelect = (themeId: string) => {
     setSelectedTheme(themeId);
