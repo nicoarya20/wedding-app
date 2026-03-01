@@ -9,10 +9,15 @@ import { toast } from "sonner";
 interface Wish extends ApiWish {}
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  // Parse date string and ensure we handle timezone correctly
+  // Add 'Z' suffix if not present to ensure UTC parsing
+  const utcDate = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  // Get time difference in seconds
+  const diffInSeconds = Math.floor((now.getTime() - utcDate.getTime()) / 1000);
 
+  if (diffInSeconds < 0) return "Baru saja"; // Future date (timezone edge case)
   if (diffInSeconds < 60) return "Baru saja";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit lalu`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam lalu`;
