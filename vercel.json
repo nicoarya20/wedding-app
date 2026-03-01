@@ -2,10 +2,5 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci --legacy-peer-deps",
   "framework": "vite",
-  "outputDirectory": "dist",
-  "caches": {
-    "node_modules": {
-      "path": "node_modules"
-    }
-  }
+  "outputDirectory": "dist"
 }
