@@ -132,6 +132,25 @@ export function UserManagement() {
 
       if (result.success) {
         toast.success(`User berhasil ${!currentStatus ? "diaktifkan" : "dinonaktifkan"}`);
+        
+        // If user is being activated, get their wedding slug and store in localStorage
+        if (!currentStatus) {
+          const user = users.find(u => u.id === userId);
+          if (user?.weddingSlug) {
+            localStorage.setItem("activeWeddingSlug", user.weddingSlug);
+            toast.success(`Wedding aktif sekarang: ${user.weddingSlug}`);
+          } else {
+            toast.warning("User diaktifkan, tetapi belum ada wedding");
+          }
+        } else {
+          // If user is being deactivated, clear the active wedding slug if it matches
+          const currentActiveSlug = localStorage.getItem("activeWeddingSlug");
+          const user = users.find(u => u.id === userId);
+          if (currentActiveSlug === user?.weddingSlug) {
+            localStorage.removeItem("activeWeddingSlug");
+          }
+        }
+        
         await loadUsers();
       } else {
         toast.error(result.error || "Gagal mengubah status user");
@@ -169,6 +188,22 @@ export function UserManagement() {
 
       if (result.success) {
         toast.success("User berhasil diupdate!");
+        
+        // Handle active wedding slug update
+        if (editUser.isActive && !selectedUser.isActive) {
+          // User is being activated
+          if (selectedUser.weddingSlug) {
+            localStorage.setItem("activeWeddingSlug", selectedUser.weddingSlug);
+            toast.success(`Wedding aktif sekarang: ${selectedUser.weddingSlug}`);
+          }
+        } else if (!editUser.isActive && selectedUser.isActive) {
+          // User is being deactivated
+          const currentActiveSlug = localStorage.getItem("activeWeddingSlug");
+          if (currentActiveSlug === selectedUser.weddingSlug) {
+            localStorage.removeItem("activeWeddingSlug");
+          }
+        }
+        
         setShowEditModal(false);
         setSelectedUser(null);
         await loadUsers();

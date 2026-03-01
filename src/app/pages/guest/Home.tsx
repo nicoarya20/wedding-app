@@ -64,17 +64,58 @@ export function Home({ weddingSlug }: HomeProps) {
   const loadDefaultWedding = async () => {
     try {
       setLoading(true);
+
+      console.log("=== loadDefaultWedding started ===");
+
+      // ✅ ALWAYS check the active user from database first (source of truth)
+      const { getActiveUserWeddingSlug } = await import("@/lib/api/multi-tenant");
+      const activeUserSlug = await getActiveUserWeddingSlug();
       
-      // ✅ Use centralized API
+      console.log("Active user slug from DB:", activeUserSlug);
+      
+      if (activeUserSlug) {
+        // ✅ Update localStorage to match the active user
+        localStorage.setItem("activeWeddingSlug", activeUserSlug);
+        console.log("Redirecting to active user wedding:", activeUserSlug);
+        // ✅ Redirect to the active user's wedding URL
+        navigate(`/w/${activeUserSlug}`, { replace: true });
+        return;
+      }
+
+      // ✅ No active user, check localStorage for previously visited wedding
+      const storedSlug = localStorage.getItem("activeWeddingSlug");
+      console.log("Stored slug in localStorage:", storedSlug);
+      
+      if (storedSlug) {
+        // Verify the slug still exists and is valid
+        const { getWeddingBySlug } = await import("@/lib/api/multi-tenant");
+        const wedding = await getWeddingBySlug(storedSlug);
+        console.log("Wedding from stored slug:", wedding);
+        
+        if (wedding) {
+          // ✅ Redirect to the stored wedding URL
+          navigate(`/w/${storedSlug}`, { replace: true });
+          return;
+        }
+        
+        // If slug is invalid, clear it
+        localStorage.removeItem("activeWeddingSlug");
+      }
+
+      // ✅ No active user and no stored slug, get first active wedding
       const wedding = await getFirstActiveWedding();
-      
+      console.log("First active wedding:", wedding);
+
       if (wedding?.slug) {
+        // ✅ Store in localStorage for future visits
+        localStorage.setItem("activeWeddingSlug", wedding.slug);
         // ✅ REDIRECT ke wedding-specific URL
         navigate(`/w/${wedding.slug}`, { replace: true });
         return;
       }
-      
+
       // No wedding found, use fallback data
+      console.log("No wedding found, using fallback data");
       loadEventData();
     } catch (error) {
       console.error("Error loading default wedding:", error);

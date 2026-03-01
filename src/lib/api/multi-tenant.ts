@@ -909,6 +909,57 @@ export async function getFirstActiveWedding(): Promise<{ slug: string } | null> 
   }
 }
 
+/**
+ * Get active wedding slug from the currently active user
+ * This is used to redirect homepage to the active user's wedding page
+ */
+export async function getActiveUserWeddingSlug(): Promise<string | null> {
+  try {
+    // Get the first active user with their wedding
+    const { data, error } = await supabase
+      .from("User")
+      .select(`
+        id,
+        isActive,
+        Wedding (
+          id,
+          slug,
+          isActive
+        )
+      `)
+      .eq("isActive", true)
+      .limit(1);
+
+    if (error) {
+      console.error("Error fetching active user:", error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.log("No active user found");
+      return null;
+    }
+
+    const user = data[0];
+    console.log("Active user found:", user);
+    
+    // Wedding is returned as an array from Supabase
+    const wedding = Array.isArray(user.Wedding) ? user.Wedding[0] : user.Wedding;
+    
+    // Return the wedding slug if user has an active wedding
+    if (wedding && wedding.isActive) {
+      console.log("Active wedding slug:", wedding.slug);
+      return wedding.slug;
+    }
+    
+    console.log("User has no active wedding");
+    return null;
+  } catch (error) {
+    console.error("Error fetching active user wedding slug:", error);
+    return null;
+  }
+}
+
 export async function createAdmin(data: { 
   username: string; 
   password: string; 
