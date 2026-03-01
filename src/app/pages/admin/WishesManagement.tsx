@@ -151,6 +151,14 @@ export function WishesManagement() {
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-2xl text-gray-800">Ucapan & Doa</h1>
             <div className="flex items-center gap-2">
+              <a
+                href="/admin/dashboard/guests"
+                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl transition-all"
+                title="Lihat daftar tamu RSVP"
+              >
+                <Inbox className="w-4 h-4" />
+                <span>Daftar Tamu RSVP</span>
+              </a>
               <button
                 onClick={() => exportToCSV(wishes)}
                 disabled={wishes.length === 0}
@@ -176,6 +184,13 @@ export function WishesManagement() {
                 Terakhir diupdate: {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </p>
             )}
+          </div>
+          {/* Info Banner */}
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p className="text-sm text-blue-800">
+              <strong>ℹ️ Info:</strong> Halaman ini menampilkan <strong>ucapan & doa</strong> dari tamu. 
+              Untuk melihat <strong>konfirmasi kehadiran (RSVP)</strong>, klik tombol "Daftar Tamu RSVP" di atas.
+            </p>
           </div>
         </motion.div>
 
