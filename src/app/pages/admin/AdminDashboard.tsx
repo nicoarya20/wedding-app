@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, CheckCircle, XCircle, HelpCircle, MessageSquare, Loader2 } from "lucide-react";
+import { Users, CheckCircle, XCircle, HelpCircle, MessageSquare, Loader2, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getDashboardStats, type DashboardStats as ApiDashboardStats } from "@/lib/api/admin";
 import { toast } from "sonner";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
 interface Stats extends ApiDashboardStats {}
 
@@ -41,6 +42,17 @@ export function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  // Prepare data for pie chart
+  const pieData = [
+    { name: "Hadir", value: stats.attending, color: "#22c55e" },
+    { name: "Tidak Hadir", value: stats.notAttending, color: "#ef4444" },
+    { name: "Belum Pasti", value: stats.uncertain, color: "#eab308" },
+  ].filter(item => item.value > 0);
+
+  const attendanceRate = stats.totalGuests > 0 
+    ? Math.round((stats.attending / stats.totalGuests) * 100) 
+    : 0;
 
   const statCards = [
     {
@@ -134,68 +146,59 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* Attendance Chart */}
+        {/* Attendance Pie Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.5 }}
           className="bg-white rounded-2xl shadow-md p-6 mb-6"
         >
-          <h2 className="text-lg text-gray-800 mb-4">Status Kehadiran</h2>
-          
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg text-gray-800">Distribusi Kehadiran</h2>
+            {stats.totalGuests > 0 && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <TrendingUp className="w-4 h-4" />
+                <span className="font-semibold">{attendanceRate}%</span>
+                <span className="text-gray-500">akan hadir</span>
+              </div>
+            )}
+          </div>
+
           {stats.totalGuests === 0 ? (
             <div className="text-center py-8 text-gray-500">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>Belum ada data RSVP</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Attending Bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Hadir</span>
-                  <span className="text-gray-900">
-                    {stats.attending} ({Math.round((stats.attending / stats.totalGuests) * 100)}%)
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-green-500 to-green-600"
-                    style={{ width: `${(stats.attending / stats.totalGuests) * 100}%` }}
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value} (${Math.round(percent * 100)}%)`}
+                    labelLine={false}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: number) => [`${value} tamu`, ""]}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: 'none',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
                   />
-                </div>
-              </div>
-
-              {/* Not Attending Bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Tidak Hadir</span>
-                  <span className="text-gray-900">
-                    {stats.notAttending} ({Math.round((stats.notAttending / stats.totalGuests) * 100)}%)
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-red-500 to-red-600"
-                    style={{ width: `${(stats.notAttending / stats.totalGuests) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Uncertain Bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Belum Pasti</span>
-                  <span className="text-gray-900">
-                    {stats.uncertain} ({Math.round((stats.uncertain / stats.totalGuests) * 100)}%)
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-yellow-500 to-yellow-600"
-                    style={{ width: `${(stats.uncertain / stats.totalGuests) * 100}%` }}
-                  />
-                </div>
-              </div>
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           )}
         </motion.div>

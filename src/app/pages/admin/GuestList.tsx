@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
-import { Search, Filter, CheckCircle, XCircle, HelpCircle, Mail, Phone, Loader2, RefreshCw } from "lucide-react";
+import { Search, Filter, CheckCircle, XCircle, HelpCircle, Mail, Phone, Loader2, RefreshCw, Download } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getGuests, type Guest as ApiGuest } from "@/lib/api/admin";
 import { toast } from "sonner";
@@ -16,16 +16,6 @@ export function GuestList() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if admin is logged in
-    if (!localStorage.getItem("adminAuthToken")) {
-      navigate("/admin");
-      return;
-    }
-
-    loadGuests();
-  }, [navigate, loadGuests]);
-
   const loadGuests = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -33,11 +23,11 @@ export function GuestList() {
       } else {
         setLoading(true);
       }
-      
+
       const data = await getGuests(searchQuery, filter);
       setGuests(data);
       setLastUpdated(new Date());
-      
+
       if (isRefresh) {
         toast.success("Data berhasil di-refresh");
       }
@@ -49,6 +39,16 @@ export function GuestList() {
       setRefreshing(false);
     }
   }, [searchQuery, filter]);
+
+  useEffect(() => {
+    // Check if admin is logged in
+    if (!localStorage.getItem("adminAuthToken")) {
+      navigate("/admin");
+      return;
+    }
+
+    loadGuests();
+  }, [navigate, loadGuests]);
 
   // Debounced search - triggers on searchQuery change
   useEffect(() => {
@@ -117,6 +117,37 @@ export function GuestList() {
     });
   };
 
+  const exportToCSV = () => {
+    // Create CSV content
+    const headers = ["Nama", "Email", "Telepon", "Status Kehadiran", "Jumlah Tamu", "Pesan", "Tanggal RSVP"];
+    const rows = guests.map(guest => [
+      `"${guest.name}"`,
+      `"${guest.email || ""}"`,
+      `"${guest.phone || ""}"`,
+      guest.attendance,
+      guest.attendance === "hadir" ? (guest.guestCount || "0") : "",
+      `"${(guest.message || "").replace(/"/g, '""')}"`,
+      new Date(guest.createdAt).toLocaleString("id-ID"),
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // Create and download file
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `guest-list-${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Data tamu berhasil diexport ke CSV!");
+  };
+
   return (
     <div className="min-h-screen pt-6 pb-24 px-6">
       <div className="max-w-md mx-auto">
@@ -126,16 +157,29 @@ export function GuestList() {
           transition={{ duration: 0.6 }}
           className="mb-6"
         >
-          <div className="flex items-center justify-between mb-1">
-            <h1 className="text-2xl text-gray-800">Daftar Tamu</h1>
-            <button
-              onClick={() => loadGuests(true)}
-              disabled={refreshing}
-              className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-2xl text-gray-800 mb-1">Daftar Tamu</h1>
+              <p className="text-gray-600">Kelola konfirmasi kehadiran tamu</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportToCSV}
+                disabled={guests.length === 0}
+                className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export ke CSV"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => loadGuests(true)}
+                disabled={refreshing}
+                className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-gray-600">Kelola konfirmasi kehadiran tamu</p>

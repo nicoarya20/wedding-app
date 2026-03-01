@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Plus, Edit, Trash2, Loader2, Search, Palette } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Loader2, Search, Palette, Calendar } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getAllUsers, createUser, type User as ApiUser } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
@@ -11,6 +11,8 @@ export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showWeddingWizard, setShowWeddingWizard] = useState(false);
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
@@ -18,6 +20,11 @@ export function UserManagement() {
     name: "",
     email: "",
     password: "",
+  });
+
+  const [newWedding, setNewWedding] = useState({
+    slug: "",
+    weddingDate: "",
   });
 
   useEffect(() => {
@@ -58,6 +65,8 @@ export function UserManagement() {
         toast.success("User berhasil dibuat!");
         setNewUser({ name: "", email: "", password: "" });
         setShowCreateModal(false);
+        setNewUserId(result.userId || null);
+        setShowWeddingWizard(true); // Show wedding setup wizard
         await loadUsers();
       } else {
         toast.error(result.error || "Gagal membuat user");
@@ -65,6 +74,44 @@ export function UserManagement() {
     } catch (error) {
       console.error("Error creating user:", error);
       toast.error("Gagal membuat user");
+    }
+  };
+
+  const handleSetupWedding = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!newWedding.slug || !newWedding.weddingDate || !newUserId) {
+      toast.error("Mohon lengkapi semua field");
+      return;
+    }
+
+    try {
+      const { createWedding } = await import("@/lib/api/multi-tenant");
+      
+      // Generate couple name from user name
+      const user = users.find(u => u.id === newUserId);
+      const coupleName = user?.name || "Couple";
+      
+      const result = await createWedding({
+        userId: newUserId,
+        slug: newWedding.slug.toLowerCase().replace(/\s+/g, '-'),
+        coupleName: coupleName,
+        weddingDate: newWedding.weddingDate,
+      });
+
+      if (result.success) {
+        toast.success("Wedding berhasil dibuat! Sekarang bisa customize tema dan menu.");
+        setNewWedding({ slug: "", weddingDate: "" });
+        setShowWeddingWizard(false);
+        setNewUserId(null);
+        // Navigate to theme customization
+        navigate(`/admin/dashboard/users/${newUserId}/wedding/theme`);
+      } else {
+        toast.error(result.error || "Gagal membuat wedding");
+      }
+    } catch (error) {
+      console.error("Error creating wedding:", error);
+      toast.error("Gagal membuat wedding");
     }
   };
 
@@ -310,6 +357,88 @@ export function UserManagement() {
                     className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all"
                   >
                     Buat User
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Wedding Setup Wizard Modal */}
+        {showWeddingWizard && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full"
+            >
+              <div className="text-center mb-6">
+                <div className="bg-gradient-to-br from-rose-100 to-pink-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-rose-600" />
+                </div>
+                <h2 className="text-2xl text-gray-800 mb-1">Setup Wedding</h2>
+                <p className="text-sm text-gray-600">Lengkapi detail wedding invitation</p>
+              </div>
+
+              {/* Info Card */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Tip:</strong> Slug akan menjadi URL unik untuk wedding page.
+                  <br />
+                  Contoh: <code className="bg-blue-100 px-2 py-0.5 rounded">sarah-michael</code> → 
+                  <code className="bg-blue-100 px-2 py-0.5 rounded ml-1">/w/sarah-michael</code>
+                </p>
+              </div>
+
+              <form onSubmit={handleSetupWedding} className="space-y-4">
+                <div>
+                  <label htmlFor="slug" className="block text-sm text-gray-700 mb-2">
+                    Wedding Slug <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="slug"
+                    value={newWedding.slug}
+                    onChange={(e) => setNewWedding({ ...newWedding, slug: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    placeholder="sarah-michael"
+                    pattern="[a-z0-9-]+"
+                    title="Gunakan huruf kecil, angka, dan tanda hubung saja"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="weddingDate" className="block text-sm text-gray-700 mb-2">
+                    Tanggal Wedding <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="weddingDate"
+                    value={newWedding.weddingDate}
+                    onChange={(e) => setNewWedding({ ...newWedding, weddingDate: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowWeddingWizard(false);
+                      setNewUserId(null);
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Lewati
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition-all"
+                  >
+                    Buat Wedding
                   </button>
                 </div>
               </form>

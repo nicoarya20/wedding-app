@@ -10,20 +10,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // ==================== USER/WEDDING OWNER APIS ====================
 
 /**
- * Create new user (wedding owner)
+ * Create new user (wedding owner) with automatic wedding creation
  */
 export interface CreateUserInput {
   email: string;
   password: string;
   name: string;
+  // Wedding setup fields (optional - for wizard flow)
+  setupWedding?: boolean;
+  weddingSlug?: string;
+  weddingDate?: string;
 }
 
-export async function createUser(data: CreateUserInput): Promise<{ success: boolean; userId?: string; error?: string }> {
+export async function createUser(data: CreateUserInput): Promise<{ success: boolean; userId?: string; weddingId?: string; error?: string }> {
   try {
     // Hash password before storing
     const hashedPassword = await hashPassword(data.password);
-    
-    const { data: user, error } = await supabase
+
+    const { data: user, error: userError } = await supabase
       .from("User")
       .insert({
         email: data.email,
@@ -34,9 +38,66 @@ export async function createUser(data: CreateUserInput): Promise<{ success: bool
       .select()
       .single();
 
-    if (error) throw error;
+    if (userError) throw userError;
 
-    return { success: true, userId: user.id };
+    // Auto-create wedding if setupWedding is true
+    let weddingId: string | undefined;
+    if (data.setupWedding && data.weddingSlug && data.weddingDate) {
+      // Generate couple name from user name (e.g., "Sarah & Michael" -> same)
+      const coupleName = data.name;
+      
+      const { data: wedding, error: weddingError } = await supabase
+        .from("Wedding")
+        .insert({
+          userId: user.id,
+          slug: data.weddingSlug,
+          coupleName: coupleName,
+          weddingDate: data.weddingDate,
+          theme: "rose",
+          primaryColor: "#e11d48",
+          secondaryColor: "#ec4899",
+          fontFamily: "serif",
+        })
+        .select()
+        .single();
+
+      if (weddingError) {
+        console.error("Error creating wedding:", weddingError);
+        // Don't fail the whole operation, just log the error
+      } else {
+        weddingId = wedding.id;
+        
+        // Create default menu config
+        await createMenuConfig({ weddingId: wedding.id });
+        
+        // Create default events (akad and resepsi)
+        const weddingDateObj = new Date(data.weddingDate);
+        const formattedDate = weddingDateObj.toISOString().split('T')[0];
+        
+        await supabase.from("Event").insert([
+          {
+            weddingId: wedding.id,
+            type: "akad",
+            date: formattedDate,
+            time: "09:00 - 11:00 WIB",
+            location: "TBA",
+            address: "Lokasi akan ditentukan",
+            order: 0,
+          },
+          {
+            weddingId: wedding.id,
+            type: "resepsi",
+            date: formattedDate,
+            time: "14:00 - 17:00 WIB",
+            location: "TBA",
+            address: "Lokasi akan ditentukan",
+            order: 1,
+          },
+        ]);
+      }
+    }
+
+    return { success: true, userId: user.id, weddingId };
   } catch (error) {
     console.error("Error creating user:", error);
     return {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
-import { Heart, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
+import { Heart, Calendar, MapPin, Clock, Loader2, Share2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
 import { getWeddingData } from "@/lib/api/multi-tenant";
@@ -124,6 +124,29 @@ export function Home({ weddingSlug }: HomeProps) {
     return eventData.coupleName;
   };
 
+  // WhatsApp share handler
+  const handleShare = () => {
+    if (!eventData || !eventData.weddingDate) return;
+
+    const weddingUrl = weddingSlug
+      ? `${window.location.origin}/w/${weddingSlug}`
+      : window.location.origin;
+
+    const message = `💍 Undangan Pernikahan ${eventData.coupleName}\n\n` +
+      `Kepada Yth. Bapak/Ibu/Saudara/i,\n` +
+      `Tanpa mengurangi rasa hormat, kami bermaksud mengundang Anda untuk menghadiri acara pernikahan kami.\n\n` +
+      `📅 Tanggal: ${formatDate(eventData.weddingDate)}\n` +
+      `🏛️ Akad: ${eventData.akadTime}\n` +
+      `🎉 Resepsi: ${eventData.resepsiTime}\n` +
+      `📍 Lokasi: ${eventData.resepsiLocation}\n\n` +
+      `Untuk informasi lebih lanjut, silakan kunjungi:\n${weddingUrl}\n\n` +
+      `Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir untuk memberikan doa restu.\n\n` +
+      `Terima kasih 🙏`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -165,8 +188,22 @@ export function Home({ weddingSlug }: HomeProps) {
               <div className="h-px w-12 bg-white/50" />
             </div>
             <p className="text-lg opacity-90">
-              {eventData ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
+              {eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
             </p>
+            
+            {/* Share Button */}
+            {!loading && (
+              <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.8, duration: 0.3 }}
+                onClick={handleShare}
+                className="mt-6 bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all px-6 py-3 rounded-full flex items-center gap-2 mx-auto"
+              >
+                <Share2 className="w-5 h-5" />
+                <span className="text-sm font-medium">Bagikan Undangan</span>
+              </motion.button>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -227,7 +264,7 @@ export function Home({ weddingSlug }: HomeProps) {
                       Loading...
                     </span>
                   ) : (
-                    eventData ? formatDate(eventData.weddingDate) : defaultEventData.weddingDate
+                    eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : defaultEventData.weddingDate
                   )}
                 </p>
               </div>
