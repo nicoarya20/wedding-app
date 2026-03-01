@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion } from "motion/react";
-import { Heart, Calendar, MapPin, Clock, Loader2, Share2, ArrowRight } from "lucide-react";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { getWeddingData, getFirstActiveWedding, type WeddingData, supabase } from "@/lib/api/multi-tenant";
+import { getFirstActiveWedding, getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
+import { Calendar, Clock, Heart, Loader2, MapPin, Share2 } from "lucide-react";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
 interface HomeProps {
   weddingSlug?: string;

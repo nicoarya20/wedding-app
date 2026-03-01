@@ -231,6 +231,7 @@ export async function deleteWish(id: string): Promise<boolean> {
 
 export async function getPublicEventData(): Promise<PublicEventData | null> {
   try {
+    // Fetch first active wedding (instead of hardcoded "sarah-michael")
     const { data, error } = await supabase
       .from("Wedding")
       .select(`
@@ -243,7 +244,9 @@ export async function getPublicEventData(): Promise<PublicEventData | null> {
           address
         )
       `)
-      .eq("slug", "sarah-michael")
+      .eq("isActive", true)
+      .order("createdAt", { ascending: true }) // Get oldest (first created)
+      .limit(1)
       .single();
 
     if (error && error.code !== "PGRST116") throw error;
