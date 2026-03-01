@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useParams } from "react-router";
 import { Home, Calendar, Image, MessageSquareHeart, CheckSquare } from "lucide-react";
-import { getMenuConfigByWeddingId, getWeddingBySlug, type Wedding } from "@/lib/api/multi-tenant";
+import { getMenuConfigByWeddingId, getWeddingBySlug, type Wedding, supabase } from "@/lib/api/multi-tenant";
 import type { MenuConfig } from "@/lib/api/multi-tenant";
 import { useWeddingTheme } from "@/app/hooks/useWeddingTheme";
 
@@ -25,9 +25,27 @@ export function GuestLayout() {
     if (slug) {
       loadMenuConfig(slug);
     } else {
-      setMenuConfig(null);
+      // No slug, load default wedding
+      loadDefaultWedding();
     }
   }, [slug]);
+
+  const loadDefaultWedding = async () => {
+    try {
+      const { data: weddings, error } = await supabase
+        .from("Wedding")
+        .select("slug")
+        .eq("isActive", true)
+        .limit(1)
+        .single();
+
+      if (weddings?.slug) {
+        loadMenuConfig(weddings.slug);
+      }
+    } catch (error) {
+      console.error("Error loading default wedding:", error);
+    }
+  };
 
   const loadMenuConfig = async (weddingSlug: string) => {
     try {
@@ -66,14 +84,25 @@ export function GuestLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-pink-50">
+    <div 
+      className="min-h-screen"
+      style={{
+        backgroundImage: wedding 
+          ? `linear-gradient(to bottom, ${wedding.primaryColor}10, ${wedding.secondaryColor}10)`
+          : 'linear-gradient(to bottom, from-rose-50 to-pink-50)',
+      }}
+    >
       <main className={`pb-${navItems.length > 0 ? '20' : '6'}`}>
         <Outlet />
       </main>
 
       {/* Bottom Navigation */}
       {navItems.length > 0 && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-rose-100 shadow-lg z-50">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50" 
+          style={{ 
+            borderColor: wedding ? `${wedding.primaryColor}30` : undefined 
+          }}
+        >
           <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -84,9 +113,10 @@ export function GuestLayout() {
                 <Link
                   key={item.path}
                   to={fullPath}
-                  className={`flex flex-col items-center justify-center gap-1 px-3 py-2 transition-colors ${
-                    isActive ? "text-rose-600" : "text-gray-500"
-                  }`}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 transition-colors"
+                  style={{
+                    color: isActive ? (wedding?.primaryColor || '#e11d48') : '#6b7280'
+                  }}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="text-xs">{item.label}</span>

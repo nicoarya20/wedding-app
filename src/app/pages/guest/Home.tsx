@@ -63,7 +63,7 @@ export function Home({ weddingSlug }: HomeProps) {
     try {
       setLoading(true);
       // Get first active wedding from database
-      const { data: weddings, error } = await supabase
+      const { data: weddings } = await supabase
         .from("Wedding")
         .select("slug")
         .eq("isActive", true)
@@ -196,9 +196,9 @@ export function Home({ weddingSlug }: HomeProps) {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen"
-      style={{ 
+      style={{
         fontFamily: fontFamily,
         '--primary-color': colors.primary,
         '--secondary-color': colors.secondary,
@@ -245,7 +245,7 @@ export function Home({ weddingSlug }: HomeProps) {
             <p className="text-lg opacity-90">
               {eventData && eventData.weddingDate ? formatDate(eventData.weddingDate) : "15 Juni 2026"}
             </p>
-            
+
             {/* Share Button */}
             {!loading && (
               <motion.button
@@ -297,8 +297,8 @@ export function Home({ weddingSlug }: HomeProps) {
       </div>
 
       {/* Quick Info Section */}
-      <div className="bg-gradient-to-b from-gray-50 to-white py-12 px-6" style={{ 
-        backgroundImage: `linear-gradient(to bottom, ${colors.primary}10, white)` 
+      <div className="bg-gradient-to-b from-gray-50 to-white py-12 px-6" style={{
+        backgroundImage: `linear-gradient(to bottom, ${colors.primary}10, white)`
       }}>
         <motion.div
           initial={{ y: 50, opacity: 0 }}
