@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Calendar, Clock, MapPin, Save, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Save, Loader2, Users, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
-import { getEventData, updateEventData, type EventData as ApiEventData } from "@/lib/api/admin";
+import { getEventData, updateEventData, getAllWeddings, type EventData as ApiEventData } from "@/lib/api/admin";
 import { toast } from "sonner";
 
 interface EventData extends Omit<ApiEventData, "id"> {
   id?: string;
+}
+
+interface WeddingOption {
+  id: string;
+  slug: string;
+  coupleName: string;
 }
 
 // Default values
@@ -26,6 +32,8 @@ export function EventManagement() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasData, setHasData] = useState(false);
+  const [weddings, setWeddings] = useState<WeddingOption[]>([]);
+  const [selectedWeddingSlug, setSelectedWeddingSlug] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,13 +43,29 @@ export function EventManagement() {
       return;
     }
 
-    loadEventData();
+    loadWeddings();
   }, [navigate]);
 
-  const loadEventData = async () => {
+  const loadWeddings = async () => {
+    try {
+      const data = await getAllWeddings();
+      setWeddings(data);
+      if (data.length > 0) {
+        // Select first wedding by default
+        setSelectedWeddingSlug(data[0].slug);
+        loadEventData(data[0].slug);
+      }
+    } catch (error) {
+      console.error("Error loading weddings:", error);
+      toast.error("Gagal memuat data wedding");
+    }
+  };
+
+  const loadEventData = async (slug?: string) => {
     try {
       setLoading(true);
-      const data = await getEventData();
+      const targetSlug = slug || selectedWeddingSlug || "sarah-michael";
+      const data = await getEventData(targetSlug);
       if (data) {
         setEventData({
           ...data,
@@ -60,6 +84,12 @@ export function EventManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleWeddingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const slug = e.target.value;
+    setSelectedWeddingSlug(slug);
+    loadEventData(slug);
   };
 
   const validateForm = (): boolean => {
@@ -107,7 +137,7 @@ export function EventManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!validateForm()) {
       return;
@@ -116,7 +146,7 @@ export function EventManagement() {
     setSaving(true);
 
     try {
-      const success = await updateEventData(eventData);
+      const success = await updateEventData(eventData, selectedWeddingSlug || undefined);
       if (success) {
         toast.success("Data acara berhasil disimpan!");
         setHasData(true);
@@ -140,9 +170,60 @@ export function EventManagement() {
           transition={{ duration: 0.6 }}
           className="mb-6"
         >
-          <h1 className="text-2xl text-gray-800 mb-1">Kelola Acara</h1>
-          <p className="text-gray-600">Ubah detail acara pernikahan</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl text-gray-800 mb-1">Kelola Acara</h1>
+              <p className="text-gray-600">Ubah detail acara pernikahan</p>
+            </div>
+            <button
+              onClick={() => navigate("/admin/dashboard/users")}
+              className="text-sm text-rose-600 hover:text-rose-700 flex items-center gap-1"
+            >
+              <Users className="w-4 h-4" />
+              Kelola User
+            </button>
+          </div>
         </motion.div>
+
+        {/* Wedding Selector */}
+        {!loading && weddings.length > 0 && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="bg-white rounded-2xl shadow-md p-4 mb-6"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-rose-600" />
+                <h2 className="text-lg text-gray-800">Pilih Wedding</h2>
+              </div>
+              <a
+                href={`/w/${selectedWeddingSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Preview
+              </a>
+            </div>
+            
+            <select
+              value={selectedWeddingSlug}
+              onChange={handleWeddingChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              {weddings.map((wedding) => (
+                <option key={wedding.id} value={wedding.slug}>
+                  {wedding.coupleName} ({wedding.slug})
+                </option>
+              ))}
+            </select>
+          </motion.div>
+        )}
 
         {/* Loading State */}
         {loading && (

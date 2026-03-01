@@ -414,6 +414,13 @@ export function UserManagement() {
                               <Menu className="w-5 h-5" />
                             </button>
                             <button
+                              onClick={() => navigate(`/admin/dashboard/event`)}
+                              className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                              title="Kelola events"
+                            >
+                              <Calendar className="w-5 h-5" />
+                            </button>
+                            <button
                               onClick={() => handleToggleActive(user.id, user.isActive)}
                               className={`${
                                 user.isActive

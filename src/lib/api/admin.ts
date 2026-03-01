@@ -275,8 +275,19 @@ export async function getPublicEventData(): Promise<PublicEventData | null> {
   }
 }
 
-export async function getEventData(): Promise<EventData | null> {
+export async function getEventData(weddingSlug?: string): Promise<EventData | null> {
   try {
+    // If no slug provided, get first active wedding
+    const { data: firstWedding } = await supabase
+      .from("Wedding")
+      .select("slug")
+      .eq("isActive", true)
+      .order("createdAt", { ascending: true })
+      .limit(1)
+      .single();
+    
+    const slug = weddingSlug || firstWedding?.slug || "sarah-michael";
+    
     const { data, error } = await supabase
       .from("Wedding")
       .select(`
@@ -289,7 +300,7 @@ export async function getEventData(): Promise<EventData | null> {
           address
         )
       `)
-      .eq("slug", "sarah-michael")
+      .eq("slug", slug)
       .single();
 
     if (error && error.code !== "PGRST116") throw error;
@@ -318,12 +329,14 @@ export async function getEventData(): Promise<EventData | null> {
   }
 }
 
-export async function updateEventData(eventData: EventData): Promise<boolean> {
+export async function updateEventData(eventData: EventData, weddingSlug?: string): Promise<boolean> {
   try {
+    const slug = weddingSlug || "sarah-michael";
+    
     const { data: wedding, error: weddingError } = await supabase
       .from("Wedding")
       .select("id")
-      .eq("slug", "sarah-michael")
+      .eq("slug", slug)
       .single();
 
     if (weddingError && weddingError.code !== "PGRST116") throw weddingError;
@@ -373,6 +386,25 @@ export async function updateEventData(eventData: EventData): Promise<boolean> {
   } catch (error) {
     console.error("Error updating event data:", error);
     return false;
+  }
+}
+
+/**
+ * Get all active weddings for dropdown
+ */
+export async function getAllWeddings(): Promise<Array<{ id: string; slug: string; coupleName: string }>> {
+  try {
+    const { data, error } = await supabase
+      .from("Wedding")
+      .select("id, slug, coupleName")
+      .eq("isActive", true)
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching weddings:", error);
+    return [];
   }
 }
 
