@@ -771,12 +771,17 @@ export async function deleteGalleryPhoto(photoId: string): Promise<boolean> {
 
 // ==================== GUEST & WISH APIS ====================
 
-export async function submitRSVP(data: SubmitRSVP): Promise<{ 
-  success: boolean; 
+export async function submitRSVP(data: SubmitRSVP): Promise<{
+  success: boolean;
   error?: string;
 }> {
   try {
+    // Generate UUID for the new guest entry
+    const guestId = generateUUID();
+    const now = new Date().toISOString();
+
     const { error } = await supabase.from("Guest").insert({
+      id: guestId,
       weddingId: data.weddingId || null,
       name: data.name,
       email: data.email || null,
@@ -784,6 +789,8 @@ export async function submitRSVP(data: SubmitRSVP): Promise<{
       attendance: data.attendance,
       guestCount: data.attendance === "hadir" ? data.guestCount : null,
       message: data.message || null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     if (error) throw error;
@@ -815,15 +822,21 @@ export async function getGuestsByWeddingId(weddingId: string): Promise<Guest[]> 
   }
 }
 
-export async function submitWish(data: SubmitWish): Promise<{ 
-  success: boolean; 
+export async function submitWish(data: SubmitWish): Promise<{
+  success: boolean;
   error?: string;
 }> {
   try {
+    // Generate UUID for the new wish entry
+    const wishId = generateUUID();
+    const now = new Date().toISOString();
+
     const { error } = await supabase.from("Wish").insert({
+      id: wishId,
       weddingId: data.weddingId || null,
       name: data.name,
       message: data.message,
+      createdAt: now,
     });
 
     if (error) throw error;
