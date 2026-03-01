@@ -888,14 +888,16 @@ export async function getAdminByUsername(username: string) {
 }
 
 /**
- * Get first active wedding (for homepage redirect)
+ * Get first active wedding from active user (for homepage redirect)
  */
 export async function getFirstActiveWedding(): Promise<{ slug: string } | null> {
   try {
+    // Get wedding from active user, ordered by creation date
     const { data, error } = await supabase
       .from("Wedding")
       .select("slug")
       .eq("isActive", true)
+      .order("createdAt", { ascending: true })
       .limit(1)
       .single();
 
