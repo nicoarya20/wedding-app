@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, Link, useLocation, useParams } from "react-router";
+import { Outlet, Link, useLocation, useParams, useNavigate } from "react-router";
 import { Home, Calendar, Image, MessageSquareHeart, CheckSquare } from "lucide-react";
 import { getMenuConfigByWeddingId, getWeddingBySlug, type Wedding, supabase } from "@/lib/api/multi-tenant";
 import type { MenuConfig } from "@/lib/api/multi-tenant";
@@ -15,6 +15,7 @@ interface MenuItem {
 export function GuestLayout() {
   const location = useLocation();
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [wedding, setWedding] = useState<Wedding | null>(null);
 
@@ -40,11 +41,17 @@ export function GuestLayout() {
         .single();
 
       if (weddings?.slug) {
-        loadMenuConfig(weddings.slug);
+        // ✅ REDIRECT ke wedding-specific URL
+        navigate(`/w/${weddings.slug}`, { replace: true });
+        return;
       }
     } catch (error) {
       console.error("Error loading default wedding:", error);
     }
+    
+    // No wedding found, continue without wedding context
+    setWedding(null);
+    setMenuConfig(null);
   };
 
   const loadMenuConfig = async (weddingSlug: string) => {
@@ -96,8 +103,8 @@ export function GuestLayout() {
         <Outlet />
       </main>
 
-      {/* Bottom Navigation */}
-      {navItems.length > 0 && (
+      {/* Bottom Navigation - only show if wedding is loaded */}
+      {navItems.length > 0 && wedding && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50" 
           style={{ 
             borderColor: wedding ? `${wedding.primaryColor}30` : undefined 

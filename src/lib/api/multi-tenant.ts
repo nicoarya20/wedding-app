@@ -887,12 +887,32 @@ export async function getAdminByUsername(username: string) {
   }
 }
 
+/**
+ * Get first active wedding (for homepage redirect)
+ */
+export async function getFirstActiveWedding(): Promise<{ slug: string } | null> {
+  try {
+    const { data, error } = await supabase
+      .from("Wedding")
+      .select("slug")
+      .eq("isActive", true)
+      .limit(1)
+      .single();
+
+    if (error || !data) return null;
+    return { slug: data.slug };
+  } catch (error) {
+    console.error("Error fetching first wedding:", error);
+    return null;
+  }
+}
+
 export async function createAdmin(data: { 
   username: string; 
   password: string; 
   role?: string;
   userId?: string;
-}) {
+}): Promise<{ success: boolean; admin?: any; error?: string }> {
   try {
     const adminId = generateUUID();
     
@@ -909,7 +929,7 @@ export async function createAdmin(data: {
       .single();
 
     if (error) throw error;
-    
+
     return { success: true, admin };
   } catch (error) {
     console.error("Error creating admin:", error);

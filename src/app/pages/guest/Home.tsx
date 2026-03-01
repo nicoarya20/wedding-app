@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
-import { Heart, Calendar, MapPin, Clock, Loader2, Share2 } from "lucide-react";
+import { Heart, Calendar, MapPin, Clock, Loader2, Share2, ArrowRight } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { getWeddingData, type WeddingData, supabase } from "@/lib/api/multi-tenant";
+import { getWeddingData, getFirstActiveWedding, type WeddingData, supabase } from "@/lib/api/multi-tenant";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 interface HomeProps {
@@ -35,6 +36,7 @@ const themeColors: Record<string, { primary: string; secondary: string; gradient
 };
 
 export function Home({ weddingSlug }: HomeProps) {
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState({
     days: 0,
     hours: 0,
@@ -62,21 +64,18 @@ export function Home({ weddingSlug }: HomeProps) {
   const loadDefaultWedding = async () => {
     try {
       setLoading(true);
-      // Get first active wedding from database
-      const { data: weddings } = await supabase
-        .from("Wedding")
-        .select("slug")
-        .eq("isActive", true)
-        .limit(1)
-        .single();
-
-      if (weddings?.slug) {
-        // Redirect to wedding page with slug
-        loadWeddingData(weddings.slug);
-      } else {
-        // No wedding found, use fallback data
-        loadEventData();
+      
+      // ✅ Use centralized API
+      const wedding = await getFirstActiveWedding();
+      
+      if (wedding?.slug) {
+        // ✅ REDIRECT ke wedding-specific URL
+        navigate(`/w/${wedding.slug}`, { replace: true });
+        return;
       }
+      
+      // No wedding found, use fallback data
+      loadEventData();
     } catch (error) {
       console.error("Error loading default wedding:", error);
       loadEventData();
