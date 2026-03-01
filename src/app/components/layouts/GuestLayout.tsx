@@ -29,7 +29,7 @@ export function GuestLayout() {
       // No slug, load default wedding
       loadDefaultWedding();
     }
-  }, [slug]);
+  }, [slug, loadMenuConfig, loadDefaultWedding]);
 
   const loadDefaultWedding = async () => {
     try {
@@ -45,8 +45,8 @@ export function GuestLayout() {
         navigate(`/w/${weddings.slug}`, { replace: true });
         return;
       }
-    } catch (error) {
-      console.error("Error loading default wedding:", error);
+    } catch (_error) {
+      console.error("Error loading default wedding");
     }
     
     // No wedding found, continue without wedding context

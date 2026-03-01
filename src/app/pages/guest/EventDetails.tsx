@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Calendar, Clock, MapPin, Navigation, Loader2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { getPublicEventData, type PublicEventData } from "@/lib/api/admin";
-import { getWeddingData, type Event as ApiEvent, type WeddingData } from "@/lib/api/multi-tenant";
+import { getWeddingData, type WeddingData } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface EventDetailsProps {
@@ -50,7 +50,6 @@ interface EventDisplay {
 }
 
 export function EventDetails({ weddingSlug }: EventDetailsProps) {
-  const [eventData, setEventData] = useState<PublicEventData | null>(null);
   const [events, setEvents] = useState<EventDisplay[]>([]);
   const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +65,7 @@ export function EventDetails({ weddingSlug }: EventDetailsProps) {
     } else {
       loadEventData();
     }
-  }, [weddingSlug]);
+  }, [weddingSlug, loadWeddingData, loadEventData]);
 
   const loadWeddingData = async (slug: string) => {
     try {

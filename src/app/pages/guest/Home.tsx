@@ -59,7 +59,7 @@ export function Home({ weddingSlug }: HomeProps) {
       // No slug provided, load default/first wedding
       loadDefaultWedding();
     }
-  }, [weddingSlug]);
+  }, [weddingSlug, loadWeddingData, loadDefaultWedding]);
 
   const loadDefaultWedding = async () => {
     try {

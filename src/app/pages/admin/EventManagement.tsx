@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Calendar, Clock, MapPin, Save, Loader2, Users, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, MapPin, Save, Loader2, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getEventData, updateEventData, getAllWeddings, type EventData as ApiEventData } from "@/lib/api/admin";
 import { toast } from "sonner";
@@ -44,7 +44,7 @@ export function EventManagement() {
     }
 
     loadWeddings();
-  }, [navigate]);
+  }, [navigate, loadWeddings]);
 
   const loadWeddings = async () => {
     try {
