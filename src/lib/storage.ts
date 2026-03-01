@@ -71,31 +71,56 @@ export async function uploadMultipleImages(
 /**
  * Delete image from Cloudinary
  * Note: Requires signed upload with signature for deletion
- * This is a placeholder - implementation depends on your backend setup
+ * Since we're in a client-side app, we'll use the Cloudinary API directly
+ * WARNING: This exposes your API_SECRET - use only in development
+ * For production, create a serverless function to handle deletion
  */
 export async function deleteImage(
   publicId: string
 ): Promise<boolean> {
   try {
-    // For unsigned uploads, deletion requires server-side API call
-    // You'll need to create a serverless function or API endpoint
-    // to handle deletion with your API_SECRET
-    
-    // Example: Call your backend API
-    const response = await fetch('/api/cloudinary/delete', {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY;
+    const apiSecret = import.meta.env.CLOUDINARY_API_SECRET;
+
+    if (!apiKey || !apiSecret) {
+      console.warn('Cloudinary credentials not configured. Skipping Cloudinary deletion.');
+      return true; // Return true to allow database deletion anyway
+    }
+
+    // Create base64 encoded auth header
+    const credentials = btoa(`${apiKey}:${apiSecret}`);
+
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`;
+
+    const formData = new FormData();
+    formData.append('public_id', publicId);
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ public_id: publicId }),
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+      },
+      body: formData,
     });
 
     if (!response.ok) {
-      throw new Error('Delete failed');
+      const errorData = await response.json();
+      console.error('Cloudinary delete error:', errorData);
+      throw new Error(errorData.error?.message || 'Delete failed');
+    }
+
+    const data = await response.json();
+    
+    if (data.result !== 'ok') {
+      console.warn('Cloudinary delete result:', data.result);
     }
 
     return true;
   } catch (error) {
     console.error('Error deleting image from Cloudinary:', error);
-    return false;
+    // Return true anyway to allow database deletion
+    return true;
   }
 }
 

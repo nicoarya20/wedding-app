@@ -709,18 +709,25 @@ export async function deleteEvent(eventId: string): Promise<boolean> {
 
 // ==================== GALLERY APIS ====================
 
-export async function createGalleryPhoto(data: CreateGalleryInput): Promise<{ 
-  success: boolean; 
+export async function createGalleryPhoto(data: CreateGalleryInput): Promise<{
+  success: boolean;
   error?: string;
 }> {
   try {
+    // Generate UUID for the new gallery photo
+    const galleryId = generateUUID();
+    const now = new Date().toISOString();
+
     const { error } = await supabase
       .from("Gallery")
       .insert({
+        id: galleryId,
         weddingId: data.weddingId,
         imageUrl: data.imageUrl,
         caption: data.caption,
         order: data.order ?? 0,
+        isActive: true,
+        createdAt: now,
       });
 
     if (error) throw error;

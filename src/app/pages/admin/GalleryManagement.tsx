@@ -20,22 +20,23 @@ export function GalleryManagement() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // For now, use the first wedding found
-    // In production, this should be the logged-in user's wedding
     loadGallery();
   }, []);
 
   const loadGallery = async () => {
     try {
       setLoading(true);
-      // Get the demo wedding
-      const { getWeddingBySlug } = await import("@/lib/api/multi-tenant");
-      const wedding = await getWeddingBySlug("sarah-michael");
+      // Get the first active wedding
+      const { getFirstActiveWedding, getWeddingBySlug } = await import("@/lib/api/multi-tenant");
+      const activeWedding = await getFirstActiveWedding();
       
-      if (wedding) {
-        setSelectedWeddingId(wedding.id);
-        const gallery = await getGalleryByWeddingId(wedding.id);
-        setPhotos(gallery);
+      if (activeWedding?.slug) {
+        const wedding = await getWeddingBySlug(activeWedding.slug);
+        if (wedding) {
+          setSelectedWeddingId(wedding.id);
+          const gallery = await getGalleryByWeddingId(wedding.id);
+          setPhotos(gallery);
+        }
       }
     } catch (error) {
       console.error("Error loading gallery:", error);
