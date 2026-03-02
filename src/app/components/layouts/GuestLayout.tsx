@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Outlet, Link, useLocation, useParams, useNavigate } from "react-router";
 import { Home, Calendar, Image, MessageSquareHeart, CheckSquare } from "lucide-react";
-import { getMenuConfigByWeddingId, getWeddingBySlug, type Wedding, supabase } from "@/lib/api/multi-tenant";
+import { getMenuConfigByWeddingId, getWeddingBySlug, type Wedding } from "@/lib/api/multi-tenant";
 import type { MenuConfig } from "@/lib/api/multi-tenant";
 import { useWeddingTheme } from "@/app/hooks/useWeddingTheme";
 
@@ -22,39 +22,8 @@ export function GuestLayout() {
   // Apply theme colors
   useWeddingTheme(wedding);
 
-  useEffect(() => {
-    if (slug) {
-      loadMenuConfig(slug);
-    } else {
-      // No slug, load default wedding
-      loadDefaultWedding();
-    }
-  }, [slug, loadMenuConfig, loadDefaultWedding]);
-
-  const loadDefaultWedding = async () => {
-    try {
-      const { data: weddings, error } = await supabase
-        .from("Wedding")
-        .select("slug")
-        .eq("isActive", true)
-        .limit(1)
-        .single();
-
-      if (weddings?.slug) {
-        // ✅ REDIRECT ke wedding-specific URL
-        navigate(`/w/${weddings.slug}`, { replace: true });
-        return;
-      }
-    } catch (_error) {
-      console.error("Error loading default wedding");
-    }
-    
-    // No wedding found, continue without wedding context
-    setWedding(null);
-    setMenuConfig(null);
-  };
-
-  const loadMenuConfig = async (weddingSlug: string) => {
+  // Memoize loadMenuConfig to prevent recreation on every render
+  const loadMenuConfig = useCallback(async (weddingSlug: string) => {
     try {
       const weddingData = await getWeddingBySlug(weddingSlug);
       if (weddingData) {
@@ -65,7 +34,39 @@ export function GuestLayout() {
     } catch (error) {
       console.error("Error loading menu config:", error);
     }
-  };
+  }, []);
+
+  // Memoize loadDefaultWedding
+  const loadDefaultWedding = useCallback(async () => {
+    try {
+      const { data: weddings, error } = await import("@/lib/api/multi-tenant").then(m => m.supabase)
+        .then(sb => sb
+          .from("Wedding")
+          .select("slug")
+          .eq("isActive", true)
+          .limit(1)
+          .single()
+        );
+
+      if (weddings?.slug) {
+        navigate(`/w/${weddings.slug}`, { replace: true });
+        return;
+      }
+    } catch (_error) {
+      console.error("Error loading default wedding");
+    }
+
+    setWedding(null);
+    setMenuConfig(null);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (slug) {
+      loadMenuConfig(slug);
+    } else {
+      loadDefaultWedding();
+    }
+  }, [slug, loadMenuConfig, loadDefaultWedding]);
 
   const baseNavItems: MenuItem[] = [
     { icon: Home, label: "Home", path: "/", key: "showHome" },
