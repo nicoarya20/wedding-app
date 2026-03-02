@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { UpdateWeddingImageModal } from "@/app/components/admin/UpdateWeddingImageModal";
+import { createUser, deleteUser, getAllUsers, getWeddingBySlug, updateUser, type User as ApiUser } from "@/lib/api/multi-tenant";
+import { Calendar, Edit, Image, Loader2, Menu, Palette, Plus, Search, ToggleLeft, ToggleRight, Trash2, Users, X } from "lucide-react";
 import { motion } from "motion/react";
-import { Users, Plus, Edit, Trash2, Loader2, Search, Palette, Calendar, ToggleLeft, ToggleRight, X, Menu } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { getAllUsers, createUser, updateUser, deleteUser, type User as ApiUser } from "@/lib/api/multi-tenant";
 import { toast } from "sonner";
 
 interface User extends ApiUser {
@@ -16,6 +17,9 @@ export function UserManagement() {
   const [showWeddingWizard, setShowWeddingWizard] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedWeddingId, setSelectedWeddingId] = useState<string | null>(null);
+  const [selectedWeddingImage, setSelectedWeddingImage] = useState<string | null>(null);
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,6 +173,32 @@ export function UserManagement() {
       isActive: user.isActive,
     });
     setShowEditModal(true);
+  };
+
+  const handleUpdateImageClick = async (user: User) => {
+    try {
+      if (!user.weddingSlug) {
+        toast.warning("User belum memiliki wedding");
+        return;
+      }
+
+      const wedding = await getWeddingBySlug(user.weddingSlug);
+      if (wedding) {
+        setSelectedWeddingId(wedding.id);
+        setSelectedWeddingImage(wedding.imageUrl || null);
+        setShowImageModal(true);
+      } else {
+        toast.warning("Wedding tidak ditemukan");
+      }
+    } catch (error) {
+      console.error("Error loading wedding:", error);
+      toast.error("Gagal memuat data wedding");
+    }
+  };
+
+  const handleImageUpdateSuccess = async () => {
+    // Reload users to get updated data
+    await loadUsers();
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -432,6 +462,15 @@ export function UserManagement() {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
+                              </button>
+                            )}
+                            {user.weddingSlug && (
+                              <button
+                                onClick={() => handleUpdateImageClick(user)}
+                                className="text-pink-600 hover:text-pink-900 transition-colors"
+                                title="Update gambar wedding"
+                              >
+                                <Image className="w-5 h-5" />
                               </button>
                             )}
                             <button
@@ -811,6 +850,21 @@ export function UserManagement() {
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Update Wedding Image Modal */}
+        {showImageModal && selectedWeddingId && (
+          <UpdateWeddingImageModal
+            isOpen={showImageModal}
+            onClose={() => {
+              setShowImageModal(false);
+              setSelectedWeddingId(null);
+              setSelectedWeddingImage(null);
+            }}
+            weddingId={selectedWeddingId}
+            currentImageUrl={selectedWeddingImage}
+            onSuccess={handleImageUpdateSuccess}
+          />
         )}
       </div>
     </div>

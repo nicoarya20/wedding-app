@@ -50,6 +50,7 @@ export interface Wedding {
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
+  imageUrl: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -544,6 +545,31 @@ export async function updateWeddingTheme(
   } catch (error) {
     console.error("Error updating theme:", error);
     return false;
+  }
+}
+
+export async function updateWeddingImage(
+  weddingId: string,
+  imageUrl: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const { error } = await supabase
+      .from("Wedding")
+      .update({ imageUrl })
+      .eq("id", weddingId);
+
+    if (error) {
+      console.error("Error updating wedding image:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating wedding image:", error);
+    return { success: false, error: "Gagal mengupdate gambar" };
   }
 }
 
