@@ -16,4 +16,20 @@ export default defineConfig({
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ["**/*.svg", "**/*.csv"],
+  // Fix for minification issues
+  build: {
+    minify: 'esbuild',
+    // Disable tree-shaking for problematic modules
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
+  // Optimize deps for better compatibility
+  optimizeDeps: {
+    include: ["react", "react-dom"],
+  },
 });
