@@ -51,6 +51,7 @@ interface EventDisplay {
 
 export function EventDetails({ weddingSlug }: EventDetailsProps) {
   const [events, setEvents] = useState<EventDisplay[]>([]);
+  const [eventData, setEventData] = useState<PublicEventData | null>(null);
   const [weddingConfig, setWeddingConfig] = useState<WeddingData["wedding"] | null>(null);
   const [loading, setLoading] = useState(true);
 
